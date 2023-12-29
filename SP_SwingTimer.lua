@@ -57,12 +57,12 @@ end
 local weapon = nil
 local offhand = nil
 local combat = false
-local prevWepSpeed = nil;
-local prevOHSpeed = nil;
 local configmod = false;
 local playersName = UnitName("player");
-st_timer = 0.0
-st_timerOff = 0.0
+st_timer = 0
+st_timerMax = nil
+st_timerOff = 0
+st_timerOffMax = nil
 --------------------------------------------------------------------------------
 local loc = {};
 loc["enUS"] = {
@@ -76,7 +76,8 @@ loc["enUS"] = {
 		Cleave = "Cleave",
 		Slam = "Slam",
 		RS = "Raptor Strike",
-		Maul = "Maul"
+		Maul = "Maul",
+		HolyStrike = "Holy Strike" -- Turtle wow
 	}
 }
 loc["frFR"] = {
@@ -90,7 +91,8 @@ loc["frFR"] = {
 		Cleave = "Enchainement",
 		Slam = "Heurtoir",
 		RS = "Attaque du raptor",
-		Maul = "Mutiler"
+		Maul = "Mutiler",
+		HolyStrike = "Frappe sacrée" -- Tortue wow
 	}
 }
 local L = loc[GetLocale()];
@@ -254,10 +256,15 @@ local function isDualWield()
 end
 
 local function ShouldResetTimer(off)
-	local timer = st_timer;
-	if (off) then timer = st_timerOff end
-
-	local percentTime = timer / GetWeaponSpeed(off)
+	if not st_timerMax then st_timerMax = GetWeaponSpeed(false) end
+	if not st_timerOffMax then st_timerOffMax = GetWeaponSpeed(true) end
+	local percentTime
+	if (off) then
+		percentTime = st_timerOff / st_timerOffMax
+	else 
+		percentTime = st_timer / st_timerMax
+	end
+	
 	return (percentTime < 0.025)
 end
 
@@ -275,19 +282,15 @@ local function UpdateWeapon()
 	end
 end
 
-local function ResetTimer(off)
-	prevWepSpeed = GetWeaponSpeed(false);
-
-	if (isDualWield()) then 
-		prevOHSpeed = GetWeaponSpeed(true); 
-	end
-	
+local function ResetTimer(off)	
 	if (not off) then
+		st_timerMax = GetWeaponSpeed(off)
 		st_timer = GetWeaponSpeed(off)
 		if (isDualWield() and st_timerOff < 0.2) then
 			st_timerOff = 0.2;
 		end
 	else
+		st_timerOffMax = GetWeaponSpeed(off)
 		st_timerOff = GetWeaponSpeed(off)
 		if (isDualWield() and st_timer < 0.2) then
 			st_timer = 0.2;
@@ -305,7 +308,7 @@ end
 
 local function SPGetArmor()
 	-- Return real armor from API on servers that have unlocked functions
-	local base, effectiveArmor = UnitArmor(unit);
+	local base, effectiveArmor = UnitArmor("target");
 	if base > 0 then
 		return effectiveArmor
 	end
@@ -393,7 +396,7 @@ local function CheckDamageSource(dmg, dmgType)
 		elseif (dmg > ((wpDmg['offMin'] * dmgRed)*0.85) and dmg < ((wpDmg['offMax'] * dmgRed)*1.15)) then
 			return "OFF";
 		else 
-			--print("DEBUG : "..dmgType.." "..dmg.."\nMAIN = "..(wpDmg['mainMin'] * dmgRed)*0.9.." - "..(wpDmg['mainMax'] * dmgRed)*1.1.."\nOFF = "..(wpDmg['offMin'] * dmgRed)*0.9.." - "..(wpDmg['offMax'] * dmgRed)*1.1);
+			-- print("DEBUG : "..dmgType.." "..dmg.."\nMAIN = "..(wpDmg['mainMin'] * dmgRed)*0.9.." - "..(wpDmg['mainMax'] * dmgRed)*1.1.."\nOFF = "..(wpDmg['offMin'] * dmgRed)*0.9.." - "..(wpDmg['offMax'] * dmgRed)*1.1);
 			return "UNKNOWN"
 		end
 
@@ -417,7 +420,7 @@ local function UpdateDisplay()
 	else
 		SP_ST_FrameTime:Show()
 		local width = SP_ST_GS["w"]
-		local size = (st_timer / GetWeaponSpeed(false)) * width
+		local size = (st_timer / st_timerMax) * width
 		if style == 2 or style == 4 or style == 6 then
 			size = width - size
 		end
@@ -450,7 +453,7 @@ local function UpdateDisplay()
 		else
 			SP_ST_FrameTime2:Show()
 			local width = SP_ST_GS["w"]
-			local size2 = (st_timerOff / GetWeaponSpeed(true)) * width
+			local size2 = (st_timerOff / st_timerOffMax) * width
 			if style == 2 or style == 4 or style == 6 then
 				size2 = width - size2
 			end
@@ -483,9 +486,9 @@ function SP_ST_OnLoad()
 	this:RegisterEvent("CHAT_MSG_COMBAT_SELF_HITS")
 	this:RegisterEvent("CHAT_MSG_SPELL_SELF_DAMAGE")
 	this:RegisterEvent("CHAT_MSG_COMBAT_CREATURE_VS_SELF_MISSES")
-	this:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS")
-	this:RegisterEvent("CHAT_MSG_SPELL_AURA_GONE_SELF")
-	this:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE")
+	this:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE")
+	this:RegisterEvent("CHAT_MSG_COMBAT_HOSTILEPLAYER_MISSES")
+	this:RegisterEvent("CHAT_MSG_SPELL_HOSTILEPLAYER_DAMAGE")
 end
 
 function SP_ST_OnEvent()
@@ -513,7 +516,7 @@ function SP_ST_OnEvent()
 
 	elseif (event == "PLAYER_REGEN_ENABLED")
 		or (event == "PLAYER_ENTERING_WORLD") then
-		combat = false
+		if UnitAffectingCombat('player') then combat = true else combat = false end
 		UpdateDisplay()
 
 	elseif (event == "PLAYER_REGEN_DISABLED") then
@@ -548,6 +551,7 @@ function SP_ST_OnEvent()
 			elseif (string.find(arg1, L['glancing'])) then
 				dmgtype = "glancing";
 			end
+			
 			local _, _, dmg, restOfArg = string.find(arg1, "(%d+)");
 			dmg = tonumber(dmg);
 
@@ -567,6 +571,8 @@ function SP_ST_OnEvent()
 					ResetTimer(false)
 				elseif isDualWield() then
 					ResetTimer(true)
+				else
+					ResetTimer(false)
 				end
 			end
 		end
@@ -578,25 +584,21 @@ function SP_ST_OnEvent()
 			end
 		end
 
-	-- Here we check at every aura gain/loss if the weaponspeed is changed, if it is we modify the timer acordingly 
-	elseif (event == "CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS") or (event == "CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE") or (event == "CHAT_MSG_SPELL_AURA_GONE_SELF") then
-		if (prevWepSpeed ~= nil) then
-			local newSpeed = GetWeaponSpeed(false);
-			if (prevWepSpeed ~= newSpeed) then
-				local perc = st_timer / prevWepSpeed;
-				st_timer = newSpeed * perc;
-			end
+	elseif (event == "CHAT_MSG_COMBAT_CREATURE_VS_SELF_MISSES") or (event == "CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE") or (event == "CHAT_MSG_COMBAT_HOSTILEPLAYER_MISSES") or (event == "CHAT_MSG_SPELL_HOSTILEPLAYER_DAMAGE") then
+		if (string.find(arg1, ".* attacks. You parry.")) or (string.find(arg1, ".* was parried.")) then
+			-- Only the upcoming swing gets parry haste benefit
 			if (isDualWield()) then
-				local newOHspeed = GetWeaponSpeed(true);
-				if (prevOHSpeed ~= newOHspeed) then
-					perc = st_timerOff / prevOHSpeed;
-					st_timerOff = newOHspeed * perc;
+				if st_timerOff < st_timer then
+					local minimum = GetWeaponSpeed(true) * 0.20
+					local reduct = GetWeaponSpeed(true) * 0.40
+					st_timerOff = st_timerOff - reduct
+					if st_timerOff < minimum then
+						st_timer = minimum
+					end
+					return -- offhand gets the parry haste benefit, return
 				end
-			end
-		end
-
-	elseif (event == "CHAT_MSG_COMBAT_CREATURE_VS_SELF_MISSES") then
-		if (string.find(arg1, ".* attacks. You parry.")) then
+			end	
+					
 			local minimum = GetWeaponSpeed(false) * 0.20
 			if (st_timer > minimum) then
 				local reduct = GetWeaponSpeed(false) * 0.40
