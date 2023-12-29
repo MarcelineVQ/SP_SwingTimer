@@ -303,27 +303,44 @@ local function TestShow()
 	ResetTimer(false)
 end
 
+local function SPGetArmor()
+	-- Return real armor from API on servers that have unlocked functions
+	local base, effectiveArmor = UnitArmor(unit);
+	if base > 0 then
+		return effectiveArmor
+	end
+	
+	-- Predictive armor from unit class works only for NPC as they have standard armor values
+	if (UnitIsPlayer("target")) then
+		return nil
+	end
+
+	-- we will do armor check on the target here
+	local basearmor = {
+		[L['Warrior']] = 3791,
+		['Paladin'] = 3075,
+		['Mage']	= 1923,
+	};
+	local unitClass = UnitClass("target");
+	local predictedArmor = basearmor[unitClass];
+	for i=1,16 do
+		debuffTexture, debuffApplications = UnitDebuff("target", i);
+		if (has_value(armorDebuffs,debuffTexture)) then
+			predictedArmor = predictedArmor - (armorDebuffs[debuffTexture]*debuffApplications);
+		end
+	end
+	return predictedArmor
+end
+	
+
+
 local function CheckDamageSource(dmg, dmgType)
 	if (not UnitExists("target")) then return end
 	if (dmg == nil) then return end
 	if (not isDualWield()) then return "MAIN" end
-	-- Only work for NPC as they have standard armor values
-	if (not UnitIsPlayer("target")) then
-		-- we will do armor check on the target here
-		local basearmor = {
-			[L['Warrior']] = 3791,
-			['Paladin'] = 3075,
-			['Mage']	= 1923,
-		};
-		local unitClass = UnitClass("target");
-		local armor = basearmor[unitClass];
-		for i=1,16 do
-			debuffTexture, debuffApplications = UnitDebuff("target", i);
-			if (has_value(armorDebuffs,debuffTexture)) then
-				armor = armor - (armorDebuffs[debuffTexture]*debuffApplications);
-			end
-		end
 
+	armor = SPGetArmor()
+	if armor then
 		local tarLVL = UnitLevel("target");
 		if (UnitLevel("target") == -1) then
 			tarLVL = 63;
