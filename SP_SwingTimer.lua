@@ -165,6 +165,47 @@ end
 
 --------------------------------------------------------------------------------
 
+local function UpdateHeroicStrike()
+	local _, class = UnitClass("player")
+	if class ~= "WARRIOR" then
+		return
+	end
+	TrackedActionSlots = {}
+	local SPActionSlot = 0;
+	for SPActionSlot = 1, 120 do
+		local SPActionText = GetActionText(SPActionSlot);
+		local SPActionTexture = GetActionTexture(SPActionSlot);
+		
+		if SPActionTexture then
+			if (SPActionTexture == "Interface\\Icons\\Ability_Rogue_Ambush" or SPActionTexture == "Interface\\Icons\\Ability_Warrior_Cleave") then
+				tinsert(TrackedActionSlots, SPActionSlot);
+			elseif SPActionText then
+				SPActionText = string.lower(SPActionText)
+				if (SPActionText == "cleave" or SPActionText == "heroic strike" or SPActionText == "heroicstrike" or SPActionText == "hs") then
+					tinsert(TrackedActionSlots, SPActionSlot);
+				end
+			end
+		end
+	end
+
+end
+
+--------------------------------------------------------------------------------
+
+local function HeroicStrikeQueued()
+	if not getn(TrackedActionSlots) then
+		return nil
+	end
+	for _, actionslotID in ipairs(TrackedActionSlots) do
+		if IsCurrentAction(actionslotID) then
+			return true
+		end
+	end
+	return nil
+end
+
+--------------------------------------------------------------------------------
+
 local function UpdateAppearance()
 	SP_ST_Frame:ClearAllPoints()
 	SP_ST_FrameOFF:ClearAllPoints()
@@ -257,7 +298,7 @@ end
 
 local function ShouldResetTimer(off)
 	if not st_timerMax then st_timerMax = GetWeaponSpeed(false) end
-	if not st_timerOffMax then st_timerOffMax = GetWeaponSpeed(true) end
+	if not st_timerOffMax and isDualWield() then st_timerOffMax = GetWeaponSpeed(true) end
 	local percentTime
 	if (off) then
 		percentTime = st_timerOff / st_timerOffMax
@@ -266,6 +307,14 @@ local function ShouldResetTimer(off)
 	end
 	
 	return (percentTime < 0.025)
+end
+
+local function ClosestSwing()
+	if not st_timerMax then st_timerMax = GetWeaponSpeed(false) end
+	if not st_timerOffMax then st_timerOffMax = GetWeaponSpeed(true) end
+	local percentLeftMH = st_timer / st_timerMax
+	local percentLeftOH = st_timerOff / st_timerOffMax
+	return (percentLeftMH > percentLeftOH)
 end
 
 local function UpdateWeapon()
@@ -308,10 +357,9 @@ end
 
 local function SPGetArmor()
 	-- Return real armor from API on servers that have unlocked functions
-	local base, effectiveArmor = UnitArmor("target");
-	if base > 0 then
-		return effectiveArmor
-	end
+	local _, effectiveArmor = UnitArmor("target");
+	if effectiveArmor then return effectiveArmor end
+	-- It's impossible to differentiate if it's 0 because the function is locked or because the enemy's armor is actually reduced to 0.
 	
 	-- Predictive armor from unit class works only for NPC as they have standard armor values
 	if (UnitIsPlayer("target")) then
@@ -326,6 +374,7 @@ local function SPGetArmor()
 	};
 	local unitClass = UnitClass("target");
 	local predictedArmor = basearmor[unitClass];
+	if not predictedArmor then return nil end
 	for i=1,16 do
 		debuffTexture, debuffApplications = UnitDebuff("target", i);
 		if (has_value(armorDebuffs,debuffTexture)) then
@@ -373,9 +422,11 @@ local function CheckDamageSource(dmg, dmgType)
 			local mainLOW = 1.3-(0.05*(mobDef - pCompMain));
 			if (mainLOW < 0.1) then mainLOW = 0.1 end;
 			if (mainLOW > 0.91) then mainLOW = 0.91 end;
+			
 			local mainHIGH = 1.2-(0.03*(mobDef - pCompMain));
 			if (mainHIGH < 0.2) then mainHIGH = 0.2 end;
 			if (mainHIGH > 0.99) then mainHIGH = 0.99 end;
+			
 			wpDmg["mainMin"] = wpDmg["mainMin"] * mainLOW;
 			wpDmg["mainMax"] = wpDmg["mainMax"] * mainHIGH;
 
@@ -383,17 +434,19 @@ local function CheckDamageSource(dmg, dmgType)
 			local offLOW = 1.3-(0.05*(mobDef - pCompOff));
 			if (offLOW < 0.1) then offLOW = 0.1 end;
 			if (offLOW > 0.91) then offLOW = 0.91 end;
+			
 			local offHIGH = 1.2-(0.03*(mobDef - pCompOff));
 			if (offHIGH < 0.2) then offHIGH = 0.2 end;
 			if (offHIGH > 0.99) then offHIGH = 0.99 end;
+			
 			wpDmg["offMin"] = wpDmg["offMin"] * offLOW;
 			wpDmg["offMax"] = wpDmg["offMax"] * offHIGH;
 		end
 
-		-- We could be a bit off, so we'll consider a 15% error margin
-		if (dmg > ((wpDmg['mainMin'] * dmgRed)*0.85) and dmg < ((wpDmg['mainMax'] * dmgRed)*1.15)) then
+		-- We could be a bit off, so we'll consider a 5% error margin
+		if (dmg > ((wpDmg['mainMin'] * dmgRed)*0.95) and dmg < ((wpDmg['mainMax'] * dmgRed)*1.05)) then
 			return "MAIN";
-		elseif (dmg > ((wpDmg['offMin'] * dmgRed)*0.85) and dmg < ((wpDmg['offMax'] * dmgRed)*1.15)) then
+		elseif (dmg > ((wpDmg['offMin'] * dmgRed)*0.95) and dmg < ((wpDmg['offMax'] * dmgRed)*1.05)) then
 			return "OFF";
 		else 
 			-- print("DEBUG : "..dmgType.." "..dmg.."\nMAIN = "..(wpDmg['mainMin'] * dmgRed)*0.9.." - "..(wpDmg['mainMax'] * dmgRed)*1.1.."\nOFF = "..(wpDmg['offMin'] * dmgRed)*0.9.." - "..(wpDmg['offMax'] * dmgRed)*1.1);
@@ -489,6 +542,7 @@ function SP_ST_OnLoad()
 	this:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE")
 	this:RegisterEvent("CHAT_MSG_COMBAT_HOSTILEPLAYER_MISSES")
 	this:RegisterEvent("CHAT_MSG_SPELL_HOSTILEPLAYER_DAMAGE")
+	this:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
 end
 
 function SP_ST_OnEvent()
@@ -510,14 +564,19 @@ function SP_ST_OnEvent()
 			UpdateSettings()
 			UpdateWeapon()
 			UpdateAppearance()
-
+			UpdateHeroicStrike()
+			if not st_timerMax then st_timerMax = GetWeaponSpeed(false) end
+			if not st_timerOffMax and isDualWield() then st_timerOffMax = GetWeaponSpeed(true) end
 			print("SP_SwingTimer " .. version .. " loaded. Options: /st")
 		end
-
+	elseif (event == "ACTIONBAR_SLOT_CHANGED") then
+		UpdateHeroicStrike()
+		
 	elseif (event == "PLAYER_REGEN_ENABLED")
 		or (event == "PLAYER_ENTERING_WORLD") then
 		if UnitAffectingCombat('player') then combat = true else combat = false end
 		UpdateDisplay()
+		UpdateHeroicStrike()
 
 	elseif (event == "PLAYER_REGEN_DISABLED") then
 		combat = true
@@ -539,8 +598,10 @@ function SP_ST_OnEvent()
 	elseif (event == "CHAT_MSG_COMBAT_SELF_MISSES") then
 		if (ShouldResetTimer(false)) then
 			ResetTimer(false)
-		elseif (ShouldResetTimer(true) and isDualWield()) then
+		elseif (isDualWield() and (ShouldResetTimer(true) or ClosestSwing)) then
 			ResetTimer(true)
+		else
+			ResetTimer(false)
 		end
 
 	elseif (event == "CHAT_MSG_COMBAT_SELF_HITS") then
@@ -562,18 +623,13 @@ function SP_ST_OnEvent()
 				dmg = dmg + tonumber(blVal);
 			end
 			
-			if (CheckDamageSource(dmg, dmgtype) == "MAIN" and ShouldResetTimer(false)) then
+			if (CheckDamageSource(dmg, dmgtype) == "MAIN") then
 				ResetTimer(false)
-			elseif (CheckDamageSource(dmg, dmgtype) == "OFF" and ShouldResetTimer(true)) then
+			elseif (CheckDamageSource(dmg, dmgtype) == "OFF") then
 				ResetTimer(true)
-			else
-				if ShouldResetTimer(false) then
-					ResetTimer(false)
-				elseif isDualWield() then
-					ResetTimer(true)
-				else
-					ResetTimer(false)
-				end
+			elseif (ClosestSwing == true or HeroicStrikeQueued()) then
+				ResetTimer(true)
+			else ResetTimer(false)
 			end
 		end
 
