@@ -689,6 +689,7 @@ end
 
 SLASH_SPSWINGTIMER1 = "/st"
 SLASH_SPSWINGTIMER2 = "/swingtimer"
+SLASH_SPSWINGTIMER3 = "/spswingtimer"
 
 local function ChatHandler(msg)
 	local vars = SplitString(msg, " ")
