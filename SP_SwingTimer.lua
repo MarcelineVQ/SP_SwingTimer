@@ -543,6 +543,7 @@ function SP_ST_OnLoad()
 	this:RegisterEvent("CHAT_MSG_COMBAT_HOSTILEPLAYER_MISSES")
 	this:RegisterEvent("CHAT_MSG_SPELL_HOSTILEPLAYER_DAMAGE")
 	this:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
+	this:RegisterEvent("PLAYER_ENTER_COMBAT")
 end
 
 function SP_ST_OnEvent()
@@ -581,6 +582,9 @@ function SP_ST_OnEvent()
 	elseif (event == "PLAYER_REGEN_DISABLED") then
 		combat = true
 
+	elseif (event == "PLAYER_ENTER_COMBAT") then
+		ResetTimer(true)
+		
 	elseif (event == "UNIT_INVENTORY_CHANGED") then
 		if (arg1 == "player") then
 			local oldWep = weapon
