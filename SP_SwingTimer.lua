@@ -583,7 +583,7 @@ function SP_ST_OnEvent()
 		combat = true
 
 	elseif (event == "PLAYER_ENTER_COMBAT") then
-		ResetTimer(true)
+		if isDualWield() then ResetTimer(true) end
 		
 	elseif (event == "UNIT_INVENTORY_CHANGED") then
 		if (arg1 == "player") then
