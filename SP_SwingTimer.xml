@@ -1,17 +1,22 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.blizzard.com/wow/ui/">
 	<Script file="SP_SwingTimer.lua"/>
-	<Frame name="SP_ST_Frame" parent="UIParent" hidden="true">
+	<Frame name="SP_ST_Updater" parent="UIParent">
 		<Scripts>
 			<OnLoad>
 				SP_ST_OnLoad()
 			</OnLoad>
-			<OnEvent>
-				SP_ST_OnEvent()
-			</OnEvent>
 			<OnUpdate>
 				SP_ST_OnUpdate(arg1)
 			</OnUpdate>
+			<OnEvent>
+				SP_ST_OnEvent()
+			</OnEvent>
+		</Scripts>	
+	</Frame>	
+	
+	<Frame name="SP_ST_Frame" parent="UIParent" hidden="true">
+		<Scripts>
 			<OnDragStart>
 				self:StartMoving()
 			</OnDragStart>
