@@ -147,7 +147,7 @@ local function has_value (tab, val)
     return false
 end
 
-function round(number, decimals)
+local function sp_round(number, decimals)
     local power = 10^decimals
     return math.floor(number * power) / power
 end
@@ -485,7 +485,7 @@ local function UpdateDisplay()
 		end
 		SP_ST_FrameTime:SetWidth(size)
 		if (SP_ST_GS["timers"] ~= 0) then
-			local showtmr = round(st_timer, 1);
+			local showtmr = sp_round(st_timer, 1);
 			if (math.floor(showtmr) == showtmr) then
 				showtmr = showtmr..".0";
 			end
@@ -518,7 +518,7 @@ local function UpdateDisplay()
 			end
 			SP_ST_FrameTime2:SetWidth(size2)
 			if (SP_ST_GS["timers"] ~= 0) then
-				local showtmr = round(st_timerOff, 1);
+				local showtmr = sp_round(st_timerOff, 1);
 				if (math.floor(showtmr) == showtmr) then
 					showtmr = showtmr..".0";
 				end
