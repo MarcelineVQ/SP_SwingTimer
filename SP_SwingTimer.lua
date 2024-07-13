@@ -12,7 +12,7 @@ local defaults = {
 	move = "off",
 	icons = 1,
 	timers = 1,
-	style = 0
+	style = 2
 }
 local settings = {
 	x = "Bar X position",
@@ -58,11 +58,11 @@ local weapon = nil
 local offhand = nil
 local combat = false
 local configmod = false;
-local playersName = UnitName("player");
+local player_guid = nil
 st_timer = 0
-st_timerMax = nil
+st_timerMax = 1
 st_timerOff = 0
-st_timerOffMax = nil
+st_timerOffMax = 1
 --------------------------------------------------------------------------------
 local loc = {};
 loc["enUS"] = {
@@ -335,15 +335,15 @@ local function ResetTimer(off)
 	if (not off) then
 		st_timerMax = GetWeaponSpeed(off)
 		st_timer = GetWeaponSpeed(off)
-		if (isDualWield() and st_timerOff < 0.2) then
-			st_timerOff = 0.2;
-		end
+		-- if (isDualWield() and st_timerOff < 0.2) then
+		-- 	st_timerOff = 0.2;
+		-- end
 	else
 		st_timerOffMax = GetWeaponSpeed(off)
 		st_timerOff = GetWeaponSpeed(off)
-		if (isDualWield() and st_timer < 0.2) then
-			st_timer = 0.2;
-		end
+		-- if (isDualWield() and st_timer < 0.2) then
+		-- 	st_timer = 0.2;
+		-- end
 	end
 
 	SP_ST_Frame:Show()
@@ -353,109 +353,6 @@ end
 
 local function TestShow()
 	ResetTimer(false)
-end
-
-local function SPGetArmor()
-	-- Return real armor from API on servers that have unlocked functions
-	local _, effectiveArmor = UnitArmor("target");
-	if effectiveArmor then return effectiveArmor end
-	-- It's impossible to differentiate if it's 0 because the function is locked or because the enemy's armor is actually reduced to 0.
-	
-	-- Predictive armor from unit class works only for NPC as they have standard armor values
-	if (UnitIsPlayer("target")) then
-		return nil
-	end
-
-	-- we will do armor check on the target here
-	local basearmor = {
-		[L['Warrior']] = 3791,
-		['Paladin'] = 3075,
-		['Mage']	= 1923,
-	};
-	local unitClass = UnitClass("target");
-	local predictedArmor = basearmor[unitClass];
-	if not predictedArmor then return nil end
-	for i=1,16 do
-		debuffTexture, debuffApplications = UnitDebuff("target", i);
-		if (has_value(armorDebuffs,debuffTexture)) then
-			predictedArmor = predictedArmor - (armorDebuffs[debuffTexture]*debuffApplications);
-		end
-	end
-	return predictedArmor
-end
-	
-
-
-local function CheckDamageSource(dmg, dmgType)
-	if (not UnitExists("target")) then return end
-	if (dmg == nil) then return end
-	if (not isDualWield()) then return "MAIN" end
-
-	armor = SPGetArmor()
-	if armor then
-		local tarLVL = UnitLevel("target");
-		if (UnitLevel("target") == -1) then
-			tarLVL = 63;
-		end 
-
-		local dmgRed = 1 - (armor/(armor+((467.5*tarLVL)-22167.5)));
-		if (dmgRed < 0) then 
-			dmgRed = 0 
-		end
-
-		local wpDmg = {};
-		wpDmg["mainMin"], wpDmg["mainMax"], wpDmg["offMin"], wpDmg["offMax"], _, _, _ = UnitDamage("player");
-
-		if (dmgType == "crit") then
-			wpDmg["mainMin"] = wpDmg["mainMin"] * 2;
-			wpDmg["mainMax"] = wpDmg["mainMax"] * 2;
-			wpDmg["offMin"] = wpDmg["offMin"] * 2;
-			wpDmg["offMax"] = wpDmg["offMax"] * 2;
-
-		elseif (dmgType == "glancing")then
-			local mobDef = tarLVL * 5;
-			local mComp, mCompMod, oComp, oCompMod = UnitAttackBothHands("player");
-			local pCompMain = mComp + mCompMod;
-			local pCompOff = oComp + oCompMod;
-
-			--Glancing values for mainhand
-			local mainLOW = 1.3-(0.05*(mobDef - pCompMain));
-			if (mainLOW < 0.1) then mainLOW = 0.1 end;
-			if (mainLOW > 0.91) then mainLOW = 0.91 end;
-			
-			local mainHIGH = 1.2-(0.03*(mobDef - pCompMain));
-			if (mainHIGH < 0.2) then mainHIGH = 0.2 end;
-			if (mainHIGH > 0.99) then mainHIGH = 0.99 end;
-			
-			wpDmg["mainMin"] = wpDmg["mainMin"] * mainLOW;
-			wpDmg["mainMax"] = wpDmg["mainMax"] * mainHIGH;
-
-			--Glancing values for offhand
-			local offLOW = 1.3-(0.05*(mobDef - pCompOff));
-			if (offLOW < 0.1) then offLOW = 0.1 end;
-			if (offLOW > 0.91) then offLOW = 0.91 end;
-			
-			local offHIGH = 1.2-(0.03*(mobDef - pCompOff));
-			if (offHIGH < 0.2) then offHIGH = 0.2 end;
-			if (offHIGH > 0.99) then offHIGH = 0.99 end;
-			
-			wpDmg["offMin"] = wpDmg["offMin"] * offLOW;
-			wpDmg["offMax"] = wpDmg["offMax"] * offHIGH;
-		end
-
-		-- We could be a bit off, so we'll consider a 5% error margin
-		if (dmg > ((wpDmg['mainMin'] * dmgRed)*0.95) and dmg < ((wpDmg['mainMax'] * dmgRed)*1.05)) then
-			return "MAIN";
-		elseif (dmg > ((wpDmg['offMin'] * dmgRed)*0.95) and dmg < ((wpDmg['offMax'] * dmgRed)*1.05)) then
-			return "OFF";
-		else 
-			-- print("DEBUG : "..dmgType.." "..dmg.."\nMAIN = "..(wpDmg['mainMin'] * dmgRed)*0.9.." - "..(wpDmg['mainMax'] * dmgRed)*1.1.."\nOFF = "..(wpDmg['offMin'] * dmgRed)*0.9.." - "..(wpDmg['offMax'] * dmgRed)*1.1);
-			return "UNKNOWN"
-		end
-
-	end
-
-	return "UNKNOWN";
 end
 
 local function UpdateDisplay()
@@ -535,56 +432,88 @@ function SP_ST_OnLoad()
 	this:RegisterEvent("PLAYER_REGEN_ENABLED")
 	this:RegisterEvent("PLAYER_REGEN_DISABLED")
 	this:RegisterEvent("UNIT_INVENTORY_CHANGED")
-	this:RegisterEvent("CHAT_MSG_COMBAT_SELF_MISSES")
-	this:RegisterEvent("CHAT_MSG_COMBAT_SELF_HITS")
-	this:RegisterEvent("CHAT_MSG_SPELL_SELF_DAMAGE")
 	this:RegisterEvent("CHAT_MSG_COMBAT_CREATURE_VS_SELF_MISSES")
 	this:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE")
 	this:RegisterEvent("CHAT_MSG_COMBAT_HOSTILEPLAYER_MISSES")
 	this:RegisterEvent("CHAT_MSG_SPELL_HOSTILEPLAYER_DAMAGE")
-	this:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
-	this:RegisterEvent("PLAYER_ENTER_COMBAT")
-end
+	this:RegisterEvent("UNIT_CASTEVENT")
+	this:RegisterEvent("UNIT_AURA")
+	this:RegisterEvent("PLAYER_ENTERING_WORLD")
+	end
 
+local flurry_fresh = nil
 function SP_ST_OnEvent()
-	if (event == "ADDON_LOADED") then
-		if (string.lower(arg1) == "sp_swingtimer") then
+	if (event == "ADDON_LOADED" and arg1 == "SP_SwingTimer") then
+		if (SP_ST_GS == nil) then
+			StaticPopup_Show("SP_ST_Install")
+		end
 
-			if (SP_ST_GS == nil) then
-				StaticPopup_Show("SP_ST_Install")
-			end
-			
-			if (SP_ST_GS ~= nil) then 
-				for k,v in pairs(defaults) do
-					if (SP_ST_GS[k] == nil) then
-						SP_ST_GS[k] = defaults[k];
-					end
+		if (SP_ST_GS ~= nil) then 
+			for k,v in pairs(defaults) do
+				if (SP_ST_GS[k] == nil) then
+					SP_ST_GS[k] = defaults[k];
 				end
 			end
-
-			UpdateSettings()
-			UpdateWeapon()
-			UpdateAppearance()
-			UpdateHeroicStrike()
-			if not st_timerMax then st_timerMax = GetWeaponSpeed(false) end
-			if not st_timerOffMax and isDualWield() then st_timerOffMax = GetWeaponSpeed(true) end
-			print("SP_SwingTimer " .. version .. " loaded. Options: /st")
 		end
-	elseif (event == "ACTIONBAR_SLOT_CHANGED") then
-		UpdateHeroicStrike()
-		
+
+		UpdateSettings()
+		UpdateWeapon()
+		UpdateAppearance()
+		if not st_timerMax then st_timerMax = GetWeaponSpeed(false) end
+		if not st_timerOffMax and isDualWield() then st_timerOffMax = GetWeaponSpeed(true) end
+		print("SP_SwingTimer " .. version .. " loaded. Options: /st")
 	elseif (event == "PLAYER_REGEN_ENABLED")
 		or (event == "PLAYER_ENTERING_WORLD") then
+		_,player_guid = UnitExists("player")
 		if UnitAffectingCombat('player') then combat = true else combat = false end
 		UpdateDisplay()
-		UpdateHeroicStrike()
 
 	elseif (event == "PLAYER_REGEN_DISABLED") then
 		combat = true
 
 	elseif (event == "PLAYER_ENTER_COMBAT") then
 		if isDualWield() then ResetTimer(true) end
-		
+
+	elseif (event == "UNIT_AURA" and arg1 == "player") then
+		for i=1,40 do
+			local _,s,id = UnitBuff("player",i)
+			if id and SpellInfo(id) == "Flurry" then
+				if s == 3 and flurry_fresh == nil then
+					-- ^ this could just be a refresh, make sure it was nil before
+					-- print("fresh")
+					flurry_fresh = true
+					st_timer = st_timer / 1.3
+					st_timerOff = st_timerOff / 1.3
+				else
+					flurry_fresh = false
+				end
+				return
+			else
+				break
+			end
+		end
+		flurry_fresh = nil
+
+	elseif (event == "UNIT_CASTEVENT" and arg1 == player_guid) then
+		if arg4 == 6603 then -- 6603 == autoattack then
+			if arg3 == "MAINHAND" then
+				-- print("mainhand hit")
+				ResetTimer(false)
+			elseif arg3 == "OFFHAND" then
+				-- print("offhand hit")
+				ResetTimer(true)
+			end
+			return
+		end
+		local spellname = SpellInfo(arg4)
+		for _,v in L['combatSpells'] do
+			if spellname == v then
+				-- print(spellname)
+				ResetTimer(false)
+				return
+			end
+		end
+
 	elseif (event == "UNIT_INVENTORY_CHANGED") then
 		if (arg1 == "player") then
 			local oldWep = weapon
@@ -596,51 +525,6 @@ function SP_ST_OnEvent()
 			end
 			if (combat and isDualWield() and oldOff ~= offhand) then
 				ResetTimer(true)
-			end
-		end
-
-	elseif (event == "CHAT_MSG_COMBAT_SELF_MISSES") then
-		if (ShouldResetTimer(false)) then
-			ResetTimer(false)
-		elseif (isDualWield() and (ShouldResetTimer(true) or ClosestSwing)) then
-			ResetTimer(true)
-		else
-			ResetTimer(false)
-		end
-
-	elseif (event == "CHAT_MSG_COMBAT_SELF_HITS") then
-		if (string.find(arg1, L['hit']) or string.find(arg1, L['crit']) or string.find(arg1, playersName.." hits") or string.find(arg1, playersName.." crits")) then
-			local dmgtype = "hit";
-			if (string.find(arg1, L['crit']) or string.find(arg1, playersName.." crits")) then
-				dmgtype = "crit";
-			elseif (string.find(arg1, L['glancing'])) then
-				dmgtype = "glancing";
-			end
-			
-			local _, _, dmg, restOfArg = string.find(arg1, "(%d+)");
-			dmg = tonumber(dmg);
-
-			if (string.find(arg1, L['block'])) then
-				local p = string.find(arg1, "(.)");
-				local restOfArg = string.sub(arg1, p, string.len(arg1));
-				local _, _, blVal = string.find(restOfArg, "(%d+)");
-				dmg = dmg + tonumber(blVal);
-			end
-			
-			if (CheckDamageSource(dmg, dmgtype) == "MAIN") then
-				ResetTimer(false)
-			elseif (CheckDamageSource(dmg, dmgtype) == "OFF") then
-				ResetTimer(true)
-			elseif (ClosestSwing == true or HeroicStrikeQueued()) then
-				ResetTimer(true)
-			else ResetTimer(false)
-			end
-		end
-
-	elseif (event == "CHAT_MSG_SPELL_SELF_DAMAGE") then
-		for k,v in L['combatSpells'] do
-			if (string.find(arg1, v)) then
-				ResetTimer(false)
 			end
 		end
 
@@ -658,7 +542,7 @@ function SP_ST_OnEvent()
 					return -- offhand gets the parry haste benefit, return
 				end
 			end	
-					
+
 			local minimum = GetWeaponSpeed(false) * 0.20
 			if (st_timer > minimum) then
 				local reduct = GetWeaponSpeed(false) * 0.40

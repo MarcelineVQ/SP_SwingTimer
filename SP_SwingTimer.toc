@@ -1,5 +1,5 @@
 ## Interface: 11200
-## Title: SP_|cffa050ffSwingTimer|r by Einbaum and BRZ
+## Title: [SuperWoW] SP_|cffa050ffSwingTimer|r by Einbaum and BRZ
 ## Author: turtle-wow version https://github.com/balakethelock
 ## Version: 4.3.0
 ## Notes: Auto-Attack Swing Timer. Chat command: |cffa050ff/st|r
