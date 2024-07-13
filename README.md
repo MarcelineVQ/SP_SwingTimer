@@ -1,5 +1,7 @@
 
 # SP_SwingTimer
+* SuperWoW-only edition.
+___
 
 Author: EinBaum
 
