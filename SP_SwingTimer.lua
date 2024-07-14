@@ -63,6 +63,7 @@ st_timer = 0
 st_timerMax = 1
 st_timerOff = 0
 st_timerOffMax = 1
+local flurry_fresh = nil
 --------------------------------------------------------------------------------
 local loc = {};
 loc["enUS"] = {
@@ -206,6 +207,37 @@ end
 
 --------------------------------------------------------------------------------
 
+-- flurry check
+local function CheckFlurry()
+	for i=1,40 do
+		local _,s,id = UnitBuff("player",i)
+		if id and SpellInfo(id) == "Flurry" then
+			if s == 3 and flurry_fresh == nil then
+				-- ^ this could just be a refresh, make sure it was nil before
+				flurry_fresh = true
+				st_timer = st_timer / 1.3
+				st_timerOff = st_timerOff / 1.3
+				st_timerMax = st_timerMax / 1.3
+				st_timerOffMax = st_timerOffMax / 1.3
+			else
+				flurry_fresh = false
+			end
+			return
+		else
+			break
+		end
+	end
+	-- no flurry present but it was present (~= nil), adjust upcoming times
+	if flurry_fresh ~= nil then
+		st_timer = st_timer * 1.3
+		st_timerMax = st_timerMax * 1.3
+		st_timerOff = st_timerOff * 1.3
+		st_timerOffMax = st_timerOffMax * 1.3
+	end
+	flurry_fresh = nil
+end
+--------------------------------------------------------------------------------
+
 local function UpdateAppearance()
 	SP_ST_Frame:ClearAllPoints()
 	SP_ST_FrameOFF:ClearAllPoints()
@@ -331,7 +363,7 @@ local function UpdateWeapon()
 	end
 end
 
-local function ResetTimer(off)	
+local function ResetTimer(off)
 	if (not off) then
 		st_timerMax = GetWeaponSpeed(off)
 		st_timer = GetWeaponSpeed(off)
@@ -348,7 +380,6 @@ local function ResetTimer(off)
 
 	SP_ST_Frame:Show()
 	if (isDualWield()) then SP_ST_FrameOFF:Show() end
-	
 end
 
 local function TestShow()
@@ -441,7 +472,6 @@ function SP_ST_OnLoad()
 	this:RegisterEvent("PLAYER_ENTERING_WORLD")
 	end
 
-local flurry_fresh = nil
 function SP_ST_OnEvent()
 	if (event == "ADDON_LOADED" and arg1 == "SP_SwingTimer") then
 		if (SP_ST_GS == nil) then
@@ -466,6 +496,7 @@ function SP_ST_OnEvent()
 		or (event == "PLAYER_ENTERING_WORLD") then
 		_,player_guid = UnitExists("player")
 		if UnitAffectingCombat('player') then combat = true else combat = false end
+		CheckFlurry()
 		UpdateDisplay()
 
 	elseif (event == "PLAYER_REGEN_DISABLED") then
@@ -475,24 +506,7 @@ function SP_ST_OnEvent()
 		if isDualWield() then ResetTimer(true) end
 
 	elseif (event == "UNIT_AURA" and arg1 == "player") then
-		for i=1,40 do
-			local _,s,id = UnitBuff("player",i)
-			if id and SpellInfo(id) == "Flurry" then
-				if s == 3 and flurry_fresh == nil then
-					-- ^ this could just be a refresh, make sure it was nil before
-					-- print("fresh")
-					flurry_fresh = true
-					st_timer = st_timer / 1.3
-					st_timerOff = st_timerOff / 1.3
-				else
-					flurry_fresh = false
-				end
-				return
-			else
-				break
-			end
-		end
-		flurry_fresh = nil
+		CheckFlurry()
 
 	elseif (event == "UNIT_CASTEVENT" and arg1 == player_guid) then
 		if arg4 == 6603 then -- 6603 == autoattack then
