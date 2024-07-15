@@ -64,6 +64,8 @@ st_timerMax = 1
 st_timerOff = 0
 st_timerOffMax = 1
 local flurry_fresh = nil
+local last_hit_mh = true
+
 --------------------------------------------------------------------------------
 local loc = {};
 loc["enUS"] = {
@@ -211,31 +213,34 @@ end
 local function CheckFlurry()
 	for i=1,40 do
 		local _,s,id = UnitBuff("player",i)
-		if id and SpellInfo(id) == "Flurry" then
-			if s == 3 and flurry_fresh == nil then
-				-- ^ this could just be a refresh, make sure it was nil before
-				flurry_fresh = true
-				st_timer = st_timer / 1.3
-				st_timerOff = st_timerOff / 1.3
-				st_timerMax = st_timerMax / 1.3
-				st_timerOffMax = st_timerOffMax / 1.3
-			else
-				flurry_fresh = false
+		if id then
+			if SpellInfo(id) == "Flurry" then
+				-- print("wasflurry: ".. GetTime())
+				if s == 3 and flurry_fresh == nil then
+					-- ^ this could just be a refresh, make sure it was nil before
+					flurry_fresh = true
+				else
+					flurry_fresh = false
+				end
+				return
 			end
-			return
 		else
 			break
 		end
 	end
 	-- no flurry present but it was present (~= nil), adjust upcoming times
 	if flurry_fresh ~= nil then
-		st_timer = st_timer * 1.3
-		st_timerMax = st_timerMax * 1.3
-		st_timerOff = st_timerOff * 1.3
-		st_timerOffMax = st_timerOffMax * 1.3
+		if last_hit_mh then
+			st_timer = st_timer * 1.3
+			st_timerMax = st_timerMax * 1.3
+		else
+			st_timerOff = st_timerOff * 1.3
+			st_timerOffMax = st_timerOffMax * 1.3
+		end
 	end
 	flurry_fresh = nil
 end
+
 --------------------------------------------------------------------------------
 
 local function UpdateAppearance()
@@ -505,17 +510,27 @@ function SP_ST_OnEvent()
 	elseif (event == "PLAYER_ENTER_COMBAT") then
 		if isDualWield() then ResetTimer(true) end
 
-	elseif (event == "UNIT_AURA" and arg1 == "player") then
+	elseif (event == "UNIT_AURA" and arg1 == player_guid) then
 		CheckFlurry()
 
 	elseif (event == "UNIT_CASTEVENT" and arg1 == player_guid) then
 		if arg4 == 6603 then -- 6603 == autoattack then
 			if arg3 == "MAINHAND" then
+				last_hit_mh = true
 				-- print("mainhand hit")
 				ResetTimer(false)
+				if flurry_fresh then
+					st_timer = st_timer / 1.3
+					st_timerMax = st_timerMax / 1.3
+				end
 			elseif arg3 == "OFFHAND" then
+				last_hit_mh = false
 				-- print("offhand hit")
 				ResetTimer(true)
+				if flurry_fresh then
+					st_timerOff = st_timerOff / 1.3
+					st_timerOffMax = st_timerOffMax / 1.3
+				end
 			end
 			return
 		end
@@ -523,9 +538,19 @@ function SP_ST_OnEvent()
 		for _,v in L['combatSpells'] do
 			if spellname == v then
 				-- print(spellname)
+				last_hit_mh = true
+				-- print("mainhand hit")
 				ResetTimer(false)
+				if flurry_fresh then
+					st_timer = st_timer / 1.3
+					st_timerMax = st_timerMax / 1.3
+				end
 				return
 			end
+		end
+		if spellname == "Flurry" and flurry_fresh == nil then
+			flurry_fresh = true
+      -- print("wasflurry cast: ".. GetTime())
 		end
 
 	elseif (event == "UNIT_INVENTORY_CHANGED") then
