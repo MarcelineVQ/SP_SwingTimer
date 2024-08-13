@@ -473,7 +473,8 @@ function SP_ST_OnLoad()
 	this:RegisterEvent("CHAT_MSG_COMBAT_HOSTILEPLAYER_MISSES")
 	this:RegisterEvent("CHAT_MSG_SPELL_HOSTILEPLAYER_DAMAGE")
 	this:RegisterEvent("UNIT_CASTEVENT")
-	this:RegisterEvent("UNIT_AURA")
+	-- this:RegisterEvent("UNIT_AURA")
+	this:RegisterEvent("PLAYER_AURAS_CHANGED")
 	this:RegisterEvent("PLAYER_ENTERING_WORLD")
 	end
 
@@ -510,7 +511,7 @@ function SP_ST_OnEvent()
 	elseif (event == "PLAYER_ENTER_COMBAT") then
 		if isDualWield() then ResetTimer(true) end
 
-	elseif (event == "UNIT_AURA" and arg1 == player_guid) then
+	elseif (event == "PLAYER_AURAS_CHANGED") then
 		CheckFlurry()
 
 	elseif (event == "UNIT_CASTEVENT" and arg1 == player_guid) then
