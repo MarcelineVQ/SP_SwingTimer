@@ -12,7 +12,8 @@ local defaults = {
 	move = "off",
 	icons = 1,
 	timers = 1,
-	style = 2
+	style = 2,
+	show_oh = true,
 }
 local settings = {
 	x = "Bar X position",
@@ -393,6 +394,8 @@ end
 
 local function UpdateDisplay()
 	local style = SP_ST_GS["style"]
+	local show_oh = SP_ST_GS["show_oh"]
+
 	if (st_timer <= 0) then
 		if style == 2 or style == 4 or style == 6 then
 			--nothing
@@ -404,6 +407,11 @@ local function UpdateDisplay()
 			SP_ST_Frame:Hide()
 		end
 	else
+		if SP_ST_InRange() then
+			SP_ST_FrameTime:SetVertexColor(1.0, 1.0, 1.0);
+		else
+			SP_ST_FrameTime:SetVertexColor(1.0, 0, 0);
+		end
 		SP_ST_FrameTime:Show()
 		local width = SP_ST_GS["w"]
 		local size = (st_timer / st_timerMax) * width
@@ -425,7 +433,7 @@ local function UpdateDisplay()
 			SP_ST_maintimer:SetText(showtmr);
 		end
 	end
-	if (isDualWield()) then
+	if (isDualWield() and show_oh) then
 		if (st_timerOff <= 0) then
 			if style == 2 or style == 4 or style == 6 then
 				--nothing
@@ -437,6 +445,11 @@ local function UpdateDisplay()
 				SP_ST_FrameOFF:Hide()
 			end
 		else
+			if SP_ST_InRange() then
+				SP_ST_FrameTime2:SetVertexColor(1.0, 1.0, 1.0);
+			else
+				SP_ST_FrameTime2:SetVertexColor(1.0, 0, 0);
+			end
 			SP_ST_FrameTime2:Show()
 			local width = SP_ST_GS["w"]
 			local size2 = (st_timerOff / st_timerOffMax) * width
@@ -458,10 +471,114 @@ local function UpdateDisplay()
 				SP_ST_offtimer:SetText(showtmr);
 			end
 		end
+	else
+		SP_ST_FrameOFF:Hide()
 	end
 end
 
 --------------------------------------------------------------------------------
+
+-- register action bars changing or world enter and identify an instant attack like backstab or sinister strike or hamstring or sunder armor or bloodthirst
+-- check these slots for range
+
+local instants = {
+	["Backstab"] = 1,
+	["Sinister Strike"] = 1,
+	["Kick"] = 1,
+	["Expose Armor"] = 1,
+	["Eviscerate"] = 1,
+	["Rupture"] = 1,
+	["Kidney Shot"] = 1,
+	["Garrote"] = 1,
+	["Ambush"] = 1,
+	["Cheap Shot"] = 1,
+	["Gouge"] = 1,
+	["Feint"] = 1,
+	["Ghosly Strike"] = 1,
+	["Hemorrhage"] = 1,
+	-- ["Riposte"] = 1, -- maybe
+
+	["Hamstring"] = 1,
+	["Sunder Armor"] = 1,
+	["Bloodthirst"] = 1,
+	["Mortal Strike"] = 1,
+	["Shield Slam"] = 1,
+	["Overpower"] = 1,
+	["Revenge"] = 1,
+	["Pummel"] = 1,
+	["Shield Bash"] = 1,
+	["Disarm"] = 1,
+	["Execute"] = 1,
+	["Taunt"] = 1,
+	["Mocking Blow"] = 1,
+	["Slam"] = 1,
+	["Decisive Strike"] = 1,
+	["Rend"] = 1,
+
+	["Crusader Strike"] = 1,
+
+	["Storm Strike"] = 1,
+
+	["Savage Bite"] = 1,
+	["Growl"] = 1,
+	["Bash"] = 1,
+	["Swipe"] = 1,
+	["Claw"] = 1,
+	["Rip"] = 1,
+	["Ferocious Bite"] = 1,
+	["Shred"] = 1,
+	["Rake"] = 1,
+	["Cower"] = 1,
+	["Ravage"] = 1,
+	["Pounce"] = 1,
+
+	["Wing Clip"] = 1,
+	["Disengage"] = 1,
+	-- ["Counterattack"] = 1, -- maybe
+}
+
+local range_check_slot = nil
+function SP_ST_Check_Actions(slot)
+	if slot then
+		local name,actionType,identifier = GetActionText(slot);
+
+		if actionType and identifier and actionType == "SPELL" then
+			local name,rank,texture = SpellInfo(identifier)
+			if instants[name] then
+				range_check_slot = i
+			end
+		end
+		return
+	end
+
+	for i=1,120 do
+		local name,actionType,identifier = GetActionText(i);
+		-- if ActionHasRange(i) then
+		-- 	print(SpellInfo(identifier))
+		-- end
+
+		if actionType and identifier and actionType == "SPELL" then
+			local name,rank,texture = SpellInfo(identifier)
+			if instants[name] then
+				range_check_slot = i
+				-- print(range_check_slot)
+				-- print(name)
+				return
+			end
+		end
+	end
+	-- no hits?
+	range_check_slot = nil
+end
+
+function SP_ST_InRange()
+	-- if the slot is nil anyway then there's no sense being red all the time
+	return range_check_slot == nil or IsActionInRange(range_check_slot) == 1
+end
+
+function rangecheck()
+	print(SP_ST_InRange() and "yes" or "no")
+end
 
 function SP_ST_OnLoad()
 	this:RegisterEvent("ADDON_LOADED")
@@ -476,6 +593,7 @@ function SP_ST_OnLoad()
 	-- this:RegisterEvent("UNIT_AURA")
 	this:RegisterEvent("PLAYER_AURAS_CHANGED")
 	this:RegisterEvent("PLAYER_ENTERING_WORLD")
+	this:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
 	end
 
 function SP_ST_OnEvent()
@@ -504,6 +622,7 @@ function SP_ST_OnEvent()
 		if UnitAffectingCombat('player') then combat = true else combat = false end
 		CheckFlurry()
 		UpdateDisplay()
+		SP_ST_Check_Actions()
 
 	elseif (event == "PLAYER_REGEN_DISABLED") then
 		combat = true
@@ -513,7 +632,8 @@ function SP_ST_OnEvent()
 
 	elseif (event == "PLAYER_AURAS_CHANGED") then
 		CheckFlurry()
-
+	elseif (evet == "ACTIONBAR_SLOT_CHANGED") then
+		SP_ST_Check_Actions(arg1)
 	elseif (event == "UNIT_CASTEVENT" and arg1 == player_guid) then
 		if arg4 == 6603 then -- 6603 == autoattack then
 			if arg3 == "MAINHAND" then
@@ -617,7 +737,6 @@ end
 
 SLASH_SPSWINGTIMER1 = "/st"
 SLASH_SPSWINGTIMER2 = "/swingtimer"
-SLASH_SPSWINGTIMER3 = "/spswingtimer"
 
 local function ChatHandler(msg)
 	local vars = SplitString(msg, " ")
@@ -644,6 +763,9 @@ local function ChatHandler(msg)
 			configmod = false;
 			UpdateAppearance();
 		end
+	elseif cmd == "offhand" then
+		SP_ST_GS["show_oh"] = not SP_ST_GS["show_oh"]
+		print("toggled showing offhand: " .. (SP_ST_GS["show_oh"] and "on" or "off"))
 	elseif settings[cmd] ~= nil then
 		if arg ~= nil then
 			local number = tonumber(arg)
@@ -661,6 +783,7 @@ local function ChatHandler(msg)
 			print(format("%s %s %s (%s)",
 				SLASH_SPSWINGTIMER1, k, SP_ST_GS[k], v))
 		end
+		print("/st offhand (Toggle offhand display)")
 	end
 	TestShow()
 end

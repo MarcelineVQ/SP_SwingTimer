@@ -1,6 +1,9 @@
 
 # SP_SwingTimer
 * SuperWoW-only edition.
+* Added indication for if you're in range to attack.
+* * Requires a plain instant melee ability to be on your action bars.
+* Added `/st offhand` command to toggle off showing offhand swing.
 ___
 
 Author: EinBaum
