@@ -657,7 +657,7 @@ function SP_ST_OnEvent()
 		end
 		local spellname = SpellInfo(arg4)
 		for _,v in L['combatSpells'] do
-			if spellname == v then
+			if spellname == v and arg3 == "CAST" then
 				-- print(spellname)
 				last_hit_mh = true
 				-- print("mainhand hit")
