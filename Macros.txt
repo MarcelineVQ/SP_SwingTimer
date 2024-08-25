@@ -1,0 +1,9 @@
+Slam:
+/run -- CastSpellByName("Slam")
+/startattack
+/run if st_timer>UnitAttackSpeed"player"*0.9 then CastSpellByName("Slam") end
+
+Heroic Strike dequeue:
+/run -- CastSpellByName("Heroic Strike")
+/startattack
+/run if st_timer and st_timer < (UnitAttackSpeed("player") * 0.2) then SpellStopCasting() else CastSpellByName("Heroic Strike") end
