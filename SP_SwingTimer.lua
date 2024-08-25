@@ -580,6 +580,33 @@ function rangecheck()
 	print(SP_ST_InRange() and "yes" or "no")
 end
 
+-- local clipping = false
+-- local HC_Timer = CreateFrame("Frame")
+-- this can't work, can't automate SpellStopCasting() with a timer
+-- function HeroicClip()
+-- 	-- if not hs_slot then
+-- 	-- 	print("Heroic Strike needs to be on your bars to use HeroicClip")
+-- 	-- end
+-- 	if clipping then return end
+-- 	CastSpellByName("Heroic Strike")
+-- 	clipping = true
+-- 	local elapsed = 0
+-- 	local dur = st_timer - UnitAttackSpeed("player") * 0.8
+-- 	HC_Timer:SetScript("OnUpdate", function ()
+-- 		dur = dur - arg1
+-- 		print(dur)
+-- 		if dur < 0 then
+-- 			print("wark")
+-- 			SpellStopCasting()
+-- 			clipping = false
+-- 			HC_Timer:SetScript("OnUpdate", nil)
+-- 		end
+-- 	end)
+
+-- 	-- if IsCurrentAction(hs_slot) else hs_is_queued = false
+-- 	-- /run if not _a then for i=1,72 do if IsAttackAction(i) then _a=i end end end if not IsCurrentAction(_a)then UseAction(_a)end if st_timer>UnitAttackSpeed"player"*0.9 then CastSpellByName"Slam()" end
+-- end
+
 function SP_ST_OnLoad()
 	this:RegisterEvent("ADDON_LOADED")
 	this:RegisterEvent("PLAYER_REGEN_ENABLED")

@@ -16,6 +16,6 @@ Use these commands for configuration:
 	/st
 	/swingtimer
 
-### SLAM MACRO.txt
-
-This spammable macro will only cast Slam if the swing timer has just been reset after an auto attack.
+### Macros.txt
+* Slam: This spammable macro will only cast Slam if the swing timer has just been reset after an auto attack.  
+* Heroic Strike: This macro (which must be spammed) will use and then dequeue heroic strike before it lands.  
