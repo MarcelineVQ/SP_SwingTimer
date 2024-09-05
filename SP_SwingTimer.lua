@@ -270,11 +270,11 @@ local function UpdateAppearance()
 		SP_ST_mainhand:SetTexture(GetInventoryItemTexture("player", GetInventorySlotInfo("MainHandSlot")));
 		SP_ST_mainhand:SetHeight(SP_ST_GS["h"]+1);
 		SP_ST_mainhand:SetWidth(SP_ST_GS["h"]+1);
-		SP_ST_mainhand:SetDrawLayer("OVERLAY");
+		-- SP_ST_mainhand:SetDrawLayer("OVERLAY");
 		SP_ST_offhand:SetTexture(GetInventoryItemTexture("player", GetInventorySlotInfo("SecondaryHandSlot")));
 		SP_ST_offhand:SetHeight(SP_ST_GS["h"]+1);
 		SP_ST_offhand:SetWidth(SP_ST_GS["h"]+1);
-		SP_ST_offhand:SetDrawLayer("OVERLAY");
+		-- SP_ST_offhand:SetDrawLayer("OVERLAY");
 	else 
 		SP_ST_mainhand:SetTexture(nil);
 		SP_ST_mainhand:SetWidth(0);
