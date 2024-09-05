@@ -9,6 +9,8 @@ local defaults = {
 	b = 2,
 	a = 1,
 	s = 1,
+	vo = -2,
+	ho = 0,
 	move = "off",
 	icons = 1,
 	bg = 1,
@@ -27,6 +29,8 @@ local settings = {
 	b = "Border height",
 	a = "Alpha between 0 and 1",
 	s = "Bar scale",
+	vo = "Offhand bar vertical offset",
+	ho = "Offhand bar horizontal offset",
 	icons = "Show weapon icons (1 = show, 0 = hide)",
 	bg = "Show background (1 = show, 0 = hide)",
 	timers = "Show weapon timers (1 = show, 0 = hide)",
@@ -259,7 +263,7 @@ local function UpdateAppearance()
 	SP_ST_maintimer:SetFont("Fonts\\FRIZQT__.TTF", SP_ST_GS["h"])
 	SP_ST_maintimer:SetTextColor(1,1,1,1);
 
-	SP_ST_FrameOFF:SetPoint("TOPLEFT", "SP_ST_Frame", "BOTTOMLEFT", 0, 1);
+	SP_ST_FrameOFF:SetPoint("TOPLEFT", "SP_ST_Frame", "BOTTOMLEFT", SP_ST_GS["ho"], SP_ST_GS["vo"]);
 	SP_ST_offtimer:SetPoint("RIGHT", "SP_ST_FrameOFF", "RIGHT", -2, 0)
 	SP_ST_offtimer:SetFont("Fonts\\FRIZQT__.TTF", SP_ST_GS["h"])
 	SP_ST_offtimer:SetTextColor(1,1,1,1);
