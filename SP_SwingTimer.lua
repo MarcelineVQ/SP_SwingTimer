@@ -11,10 +11,14 @@ local defaults = {
 	s = 1,
 	move = "off",
 	icons = 1,
+	bg = 1,
 	timers = 1,
 	style = 2,
 	show_oh = true,
 }
+
+local default_bg = nil
+
 local settings = {
 	x = "Bar X position",
 	y = "Bar Y position",
@@ -24,10 +28,12 @@ local settings = {
 	a = "Alpha between 0 and 1",
 	s = "Bar scale",
 	icons = "Show weapon icons (1 = show, 0 = hide)",
+	bg = "Show background (1 = show, 0 = hide)",
 	timers = "Show weapon timers (1 = show, 0 = hide)",
 	style = "Choose 1, 2, 3, 4, 5 or 6",
 	move = "Enable bars movement",
 }
+
 local armorDebuffs = {
 	["Interface\\Icons\\Ability_Warrior_Sunder"] = 450, 
 	["Interface\\Icons\\Spell_Shadow_Unholystrength"] = 640, 
@@ -253,10 +259,12 @@ local function UpdateAppearance()
 	SP_ST_maintimer:SetFont("Fonts\\FRIZQT__.TTF", SP_ST_GS["h"])
 	SP_ST_maintimer:SetTextColor(1,1,1,1);
 
-	SP_ST_FrameOFF:SetPoint("TOPLEFT", "SP_ST_Frame", "BOTTOMLEFT", 0, -2);
+	SP_ST_FrameOFF:SetPoint("TOPLEFT", "SP_ST_Frame", "BOTTOMLEFT", 0, 1);
 	SP_ST_offtimer:SetPoint("RIGHT", "SP_ST_FrameOFF", "RIGHT", -2, 0)
 	SP_ST_offtimer:SetFont("Fonts\\FRIZQT__.TTF", SP_ST_GS["h"])
 	SP_ST_offtimer:SetTextColor(1,1,1,1);
+	if (SP_ST_GS["bg"] ~= 0) then SP_ST_Frame:SetBackdrop(default_bg) else SP_ST_Frame:SetBackdrop(nil) end
+	if (SP_ST_GS["bg"] ~= 0) then SP_ST_FrameOFF:SetBackdrop(default_bg) else SP_ST_FrameOFF:SetBackdrop(nil) end
 
 	if (SP_ST_GS["icons"] ~= 0) then
 		SP_ST_mainhand:SetTexture(GetInventoryItemTexture("player", GetInventorySlotInfo("MainHandSlot")));
@@ -395,6 +403,13 @@ end
 local function UpdateDisplay()
 	local style = SP_ST_GS["style"]
 	local show_oh = SP_ST_GS["show_oh"]
+	if SP_ST_InRange() then
+		SP_ST_FrameTime:SetVertexColor(1.0, 1.0, 1.0);
+		SP_ST_FrameTime2:SetVertexColor(1.0, 1.0, 1.0);
+	else
+		SP_ST_FrameTime:SetVertexColor(1.0, 0, 0);
+		SP_ST_FrameTime2:SetVertexColor(1.0, 0, 0);
+	end
 
 	if (st_timer <= 0) then
 		if style == 2 or style == 4 or style == 6 then
@@ -407,11 +422,6 @@ local function UpdateDisplay()
 			SP_ST_Frame:Hide()
 		end
 	else
-		if SP_ST_InRange() then
-			SP_ST_FrameTime:SetVertexColor(1.0, 1.0, 1.0);
-		else
-			SP_ST_FrameTime:SetVertexColor(1.0, 0, 0);
-		end
 		SP_ST_FrameTime:Show()
 		local width = SP_ST_GS["w"]
 		local size = (st_timer / st_timerMax) * width
@@ -445,11 +455,6 @@ local function UpdateDisplay()
 				SP_ST_FrameOFF:Hide()
 			end
 		else
-			if SP_ST_InRange() then
-				SP_ST_FrameTime2:SetVertexColor(1.0, 1.0, 1.0);
-			else
-				SP_ST_FrameTime2:SetVertexColor(1.0, 0, 0);
-			end
 			SP_ST_FrameTime2:Show()
 			local width = SP_ST_GS["w"]
 			local size2 = (st_timerOff / st_timerOffMax) * width
@@ -628,6 +633,7 @@ function SP_ST_OnEvent()
 		if (SP_ST_GS == nil) then
 			StaticPopup_Show("SP_ST_Install")
 		end
+		default_bg = SP_ST_Frame:GetBackdrop()
 
 		if (SP_ST_GS ~= nil) then 
 			for k,v in pairs(defaults) do
