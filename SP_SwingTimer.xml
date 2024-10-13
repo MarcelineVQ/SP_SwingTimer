@@ -29,7 +29,7 @@
 			<AbsDimension x="200" y="10" />
 		</Size>
 
-		<Backdrop bgFile="Interface\DialogFrame\UI-DialogBox-Background">
+		<Backdrop bgFile="Interface\Tooltips\UI-Tooltip-Background">
 		</Backdrop>
 
 		<Layers>
@@ -62,7 +62,7 @@
 			<AbsDimension x="200" y="10" />
 		</Size>
 
-		<Backdrop bgFile="Interface\DialogFrame\UI-DialogBox-Background">
+		<Backdrop bgFile="Interface\Tooltips\UI-Tooltip-Background">
 		</Backdrop>
 
 		<Layers>

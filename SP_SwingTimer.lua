@@ -1,5 +1,5 @@
 
-local version = "4.1.1"
+local version = "5.0.0"
 
 local defaults = {
 	x = 0,
@@ -19,7 +19,8 @@ local defaults = {
 	show_oh = true,
 }
 
-local default_bg = nil
+local default_bg1 = nil
+local default_bg2 = nil
 
 local settings = {
 	x = "Bar X position",
@@ -75,7 +76,7 @@ st_timerMax = 1
 st_timerOff = 0
 st_timerOffMax = 1
 local flurry_fresh = nil
-local last_hit_mh = true
+local flurry_count = -1
 
 --------------------------------------------------------------------------------
 local loc = {};
@@ -222,34 +223,15 @@ end
 
 -- flurry check
 local function CheckFlurry()
-	for i=1,40 do
-		local _,s,id = UnitBuff("player",i)
-		if id then
-			if SpellInfo(id) == "Flurry" then
-				-- print("wasflurry: ".. GetTime())
-				if s == 3 and flurry_fresh == nil then
-					-- ^ this could just be a refresh, make sure it was nil before
-					flurry_fresh = true
-				else
-					flurry_fresh = false
-				end
-				return
-			end
-		else
-			break
+  local c = 0
+  while GetPlayerBuff(c,"HELPFUL") ~= -1 do
+    local id = GetPlayerBuffID(c)
+		if SpellInfo(id) == "Flurry" then
+			return GetPlayerBuffApplications(c)
 		end
-	end
-	-- no flurry present but it was present (~= nil), adjust upcoming times
-	if flurry_fresh ~= nil then
-		if last_hit_mh then
-			st_timer = st_timer * 1.3
-			st_timerMax = st_timerMax * 1.3
-		else
-			st_timerOff = st_timerOff * 1.3
-			st_timerOffMax = st_timerOffMax * 1.3
-		end
-	end
-	flurry_fresh = nil
+		c = c + 1
+  end
+	return -1
 end
 
 --------------------------------------------------------------------------------
@@ -267,8 +249,8 @@ local function UpdateAppearance()
 	SP_ST_offtimer:SetPoint("RIGHT", "SP_ST_FrameOFF", "RIGHT", -2, 0)
 	SP_ST_offtimer:SetFont("Fonts\\FRIZQT__.TTF", SP_ST_GS["h"])
 	SP_ST_offtimer:SetTextColor(1,1,1,1);
-	if (SP_ST_GS["bg"] ~= 0) then SP_ST_Frame:SetBackdrop(default_bg) else SP_ST_Frame:SetBackdrop(nil) end
-	if (SP_ST_GS["bg"] ~= 0) then SP_ST_FrameOFF:SetBackdrop(default_bg) else SP_ST_FrameOFF:SetBackdrop(nil) end
+	if (SP_ST_GS["bg"] ~= 0) then SP_ST_Frame:SetBackdrop(default_bg1) else SP_ST_Frame:SetBackdrop(nil) end
+	if (SP_ST_GS["bg"] ~= 0) then SP_ST_FrameOFF:SetBackdrop(default_bg2) else SP_ST_FrameOFF:SetBackdrop(nil) end
 
 	if (SP_ST_GS["icons"] ~= 0) then
 		SP_ST_mainhand:SetTexture(GetInventoryItemTexture("player", GetInventorySlotInfo("MainHandSlot")));
@@ -410,9 +392,13 @@ local function UpdateDisplay()
 	if SP_ST_InRange() then
 		SP_ST_FrameTime:SetVertexColor(1.0, 1.0, 1.0);
 		SP_ST_FrameTime2:SetVertexColor(1.0, 1.0, 1.0);
+		SP_ST_Frame:SetBackdropColor(0,0,0,0.8);
+		SP_ST_FrameOFF:SetBackdropColor(0,0,0,0.8);
 	else
 		SP_ST_FrameTime:SetVertexColor(1.0, 0, 0);
 		SP_ST_FrameTime2:SetVertexColor(1.0, 0, 0);
+		SP_ST_Frame:SetBackdropColor(1,0,0,0.8);
+		SP_ST_FrameOFF:SetBackdropColor(1,0,0,0.8);
 	end
 
 	if (st_timer <= 0) then
@@ -589,33 +575,6 @@ function rangecheck()
 	print(SP_ST_InRange() and "yes" or "no")
 end
 
--- local clipping = false
--- local HC_Timer = CreateFrame("Frame")
--- this can't work, can't automate SpellStopCasting() with a timer
--- function HeroicClip()
--- 	-- if not hs_slot then
--- 	-- 	print("Heroic Strike needs to be on your bars to use HeroicClip")
--- 	-- end
--- 	if clipping then return end
--- 	CastSpellByName("Heroic Strike")
--- 	clipping = true
--- 	local elapsed = 0
--- 	local dur = st_timer - UnitAttackSpeed("player") * 0.8
--- 	HC_Timer:SetScript("OnUpdate", function ()
--- 		dur = dur - arg1
--- 		print(dur)
--- 		if dur < 0 then
--- 			print("wark")
--- 			SpellStopCasting()
--- 			clipping = false
--- 			HC_Timer:SetScript("OnUpdate", nil)
--- 		end
--- 	end)
-
--- 	-- if IsCurrentAction(hs_slot) else hs_is_queued = false
--- 	-- /run if not _a then for i=1,72 do if IsAttackAction(i) then _a=i end end end if not IsCurrentAction(_a)then UseAction(_a)end if st_timer>UnitAttackSpeed"player"*0.9 then CastSpellByName"Slam()" end
--- end
-
 function SP_ST_OnLoad()
 	this:RegisterEvent("ADDON_LOADED")
 	this:RegisterEvent("PLAYER_REGEN_ENABLED")
@@ -627,7 +586,7 @@ function SP_ST_OnLoad()
 	this:RegisterEvent("CHAT_MSG_SPELL_HOSTILEPLAYER_DAMAGE")
 	this:RegisterEvent("UNIT_CASTEVENT")
 	-- this:RegisterEvent("UNIT_AURA")
-	this:RegisterEvent("PLAYER_AURAS_CHANGED")
+	-- this:RegisterEvent("PLAYER_AURAS_CHANGED")
 	this:RegisterEvent("PLAYER_ENTERING_WORLD")
 	this:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
 	end
@@ -637,7 +596,8 @@ function SP_ST_OnEvent()
 		if (SP_ST_GS == nil) then
 			StaticPopup_Show("SP_ST_Install")
 		end
-		default_bg = SP_ST_Frame:GetBackdrop()
+		default_bg1 = SP_ST_Frame:GetBackdrop()
+		default_bg2 = SP_ST_FrameOFF:GetBackdrop()
 
 		if (SP_ST_GS ~= nil) then 
 			for k,v in pairs(defaults) do
@@ -666,30 +626,51 @@ function SP_ST_OnEvent()
 
 	elseif (event == "PLAYER_ENTER_COMBAT") then
 		if isDualWield() then ResetTimer(true) end
-
-	elseif (event == "PLAYER_AURAS_CHANGED") then
-		CheckFlurry()
+		flurry_count = CheckFlurry()
 	elseif (evet == "ACTIONBAR_SLOT_CHANGED") then
 		SP_ST_Check_Actions(arg1)
 	elseif (event == "UNIT_CASTEVENT" and arg1 == player_guid) then
+		local spell = SpellInfo(arg4)
+		if spell == "Flurry" then
+			if flurry_count < 1 then -- track a completely fresh flurry for timing
+				flurry_fresh = true
+			end
+			flurry_count = 3
+		end
 		if arg4 == 6603 then -- 6603 == autoattack then
+			-- print("swing, flurry "..flurry_count..(flurry_fresh and ", is fresh" or ""))
 			if arg3 == "MAINHAND" then
+				-- print(format("mh %.3f",GetWeaponSpeed(false)))
 				last_hit_mh = true
 				-- print("mainhand hit")
 				ResetTimer(false)
-				if flurry_fresh then
+
+				if flurry_fresh then -- fresh flurry, decrease the swing cooldown of the next swing
 					st_timer = st_timer / 1.3
 					st_timerMax = st_timerMax / 1.3
+					flurry_fresh = false
+				end
+				if flurry_count == 0 then -- used up last flurry
+					st_timer = st_timer * 1.3
+					st_timerMax = st_timerMax * 1.3
 				end
 			elseif arg3 == "OFFHAND" then
+				-- print(format("oh %.3f",GetWeaponSpeed(true)))
 				last_hit_mh = false
 				-- print("offhand hit")
 				ResetTimer(true)
-				if flurry_fresh then
+
+				if flurry_fresh then -- fresh flurry, decrease the swing cooldown of the next swing
 					st_timerOff = st_timerOff / 1.3
 					st_timerOffMax = st_timerOffMax / 1.3
+					flurry_fresh = false
+				end
+				if flurry_count == 0 then -- used up last flurry
+					st_timerOff = st_timerOff * 1.3
+					st_timerOffMax = st_timerOffMax * 1.3
 				end
 			end
+			flurry_count = flurry_count - 1 -- swing occured, reduce flurry counter
 			return
 		end
 		local spellname = SpellInfo(arg4)
