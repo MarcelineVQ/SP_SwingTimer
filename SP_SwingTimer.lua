@@ -701,7 +701,13 @@ function SP_ST_OnEvent()
 			if (combat and oldWep ~= weapon) then
 				ResetTimer(false)
 			end
-			if (combat and isDualWield() and oldOff ~= offhand) then
+
+			-- don't forget OH timer just because you put on a shield, you might still care, especially for macros
+			local _,_,itemId = string.find(offhand,"item:(%d+)")
+			local _name,_link,_,_lvl,wep_type,_subtype,_ = GetItemInfo(itemId)
+			-- print("waf1")
+			if (combat and isDualWield() and ((oldOff ~= offhand) and (wep_type and wep_type == "Weapon"))) then
+				-- print("waf2")
 				ResetTimer(true)
 			end
 		end
