@@ -591,6 +591,7 @@ function SP_ST_OnLoad()
 	this:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
 	end
 
+local pause = false
 function SP_ST_OnEvent()
 	if (event == "ADDON_LOADED" and arg1 == "SP_SwingTimer") then
 		if (SP_ST_GS == nil) then
@@ -631,11 +632,27 @@ function SP_ST_OnEvent()
 		SP_ST_Check_Actions(arg1)
 	elseif (event == "UNIT_CASTEVENT" and arg1 == player_guid) then
 		local spell = SpellInfo(arg4)
+		--[[
+		local GREY = "|cff999999"
+		local WHITE = "|cffFFFFFF"
+		print (event)
+		print (GREY.."[casterGUID]"..WHITE.."["..arg1.."]")
+		print (GREY.."[targetGUID]"..WHITE.."["..arg2.."]")
+		print (GREY.."[event type]"..WHITE.."["..arg3.."]")
+		print (GREY.."[spell id]"..WHITE.."["..arg4.."]"..GREY.."[spell name]"..WHITE.."["..spell.."]")
+		print (GREY.."[cast duration]"..WHITE.."["..arg5.."]")]]
 		if spell == "Flurry" then
 			if flurry_count < 1 then -- track a completely fresh flurry for timing
 				flurry_fresh = true
 			end
 			flurry_count = 3
+		end
+		if arg4 == 1464 --[[or arg4 == 45599]] then -- 1464 == Slam; 45599 == Decisive Strike (seems like DS doesn't reset swing timer nor pause it - bug?)
+			if arg3 == "START" then
+				pause = true
+			elseif arg3 == "CAST" or arg3 == "FAIL" then
+				pause = false
+			end
 		end
 		if arg4 == 6603 then -- 6603 == autoattack then
 			-- print("swing, flurry "..flurry_count..(flurry_fresh and ", is fresh" or ""))
@@ -675,7 +692,7 @@ function SP_ST_OnEvent()
 		end
 		local spellname = SpellInfo(arg4)
 		for _,v in L['combatSpells'] do
-			if spellname == v and arg3 == "CAST" then
+			if spellname == v and spellname ~= "Slam" and spellname ~= "Decisive Strike" and arg3 == "CAST" then
 				-- print(spellname)
 				last_hit_mh = true
 				-- print("mainhand hit")
@@ -743,7 +760,11 @@ end
 
 function SP_ST_OnUpdate(delta)
 	if (st_timer > 0) then
-		st_timer = st_timer - delta
+		if pause then
+			st_timer = st_timer
+		else
+			st_timer = st_timer - delta
+		end
 		if (st_timer < 0) then
 			st_timer = 0
 		end
