@@ -75,6 +75,7 @@ local combat = false
 local configmod = false;
 local player_guid = nil
 local paused_swing = nil
+local paused_swingOH = nil
 st_timer = 0
 st_timerMax = 1
 st_timerOff = 0
@@ -113,7 +114,7 @@ loc["frFR"] = {
 	combatSpells = {
 		HS = "Frappe héroïque",
 		Cleave = "Enchainement",
-		Slam = "Heurtoir",
+		-- Slam = "Heurtoir",
 		RS = "Attaque du raptor",
 		Maul = "Mutiler",
 		HolyStrike = "Frappe sacrée" -- Tortue wow
@@ -788,9 +789,14 @@ function SP_ST_OnEvent()
 	  if SpellInfo(arg4) == "Slam" then
 			if arg3 == "START" then
 				paused_swing = st_timer
+				paused_swingOH = st_timerOff
 			else --fail
 				st_timer = paused_swing
+				st_timerOff = paused_swingOH
 				paused_swing = nil
+				paused_swingOH = nil
+				-- slam resets OH swing
+				-- ResetTimer(true)
 			end
 			return
 		end
@@ -876,7 +882,7 @@ function SP_ST_OnUpdate(delta)
 			st_timer = 0
 		end
 	end
-	if (st_timerOff > 0) then
+	if (st_timerOff > 0) and not paused_swingOH then
 		st_timerOff = st_timerOff - delta
 		if (st_timerOff < 0) then
 			st_timerOff = 0
