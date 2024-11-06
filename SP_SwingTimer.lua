@@ -17,10 +17,12 @@ local defaults = {
 	timers = 1,
 	style = 2,
 	show_oh = true,
+	show_range = true,
 }
 
 local default_bg1 = nil
 local default_bg2 = nil
+local default_bg3 = nil
 
 local settings = {
 	x = "Bar X position",
@@ -68,13 +70,18 @@ end
 --------------------------------------------------------------------------------
 local weapon = nil
 local offhand = nil
+local range = nil
 local combat = false
 local configmod = false;
 local player_guid = nil
+local paused_swing = nil
 st_timer = 0
 st_timerMax = 1
 st_timerOff = 0
 st_timerOffMax = 1
+st_timerRange = 0
+st_timerRangeMax = 1
+local range_fader = 0
 local flurry_fresh = nil
 local flurry_count = -1
 
@@ -89,10 +96,12 @@ loc["enUS"] = {
 	combatSpells = {
 		HS = "Heroic Strike",
 		Cleave = "Cleave",
-		Slam = "Slam",
+		-- Slam = "Slam",
 		RS = "Raptor Strike",
 		Maul = "Maul",
-		HolyStrike = "Holy Strike" -- Turtle wow
+		HolyStrike = "Holy Strike", -- Turtle wow
+		RaptorStrike = "Raptor Strike", -- Turtle wow
+		MongooseBite = "Mongoose Bite", -- Turtle wow
 	}
 }
 loc["frFR"] = {
@@ -239,6 +248,7 @@ end
 local function UpdateAppearance()
 	SP_ST_Frame:ClearAllPoints()
 	SP_ST_FrameOFF:ClearAllPoints()
+	SP_ST_FrameRange:ClearAllPoints()
 	
 	SP_ST_Frame:SetPoint("TOPLEFT", SP_ST_GS["x"], SP_ST_GS["y"])
 	SP_ST_maintimer:SetPoint("RIGHT", "SP_ST_Frame", "RIGHT", -2, 0)
@@ -252,6 +262,13 @@ local function UpdateAppearance()
 	if (SP_ST_GS["bg"] ~= 0) then SP_ST_Frame:SetBackdrop(default_bg1) else SP_ST_Frame:SetBackdrop(nil) end
 	if (SP_ST_GS["bg"] ~= 0) then SP_ST_FrameOFF:SetBackdrop(default_bg2) else SP_ST_FrameOFF:SetBackdrop(nil) end
 
+	SP_ST_FrameRange:SetPoint("TOPLEFT", "SP_ST_FrameOFF", "BOTTOMLEFT", SP_ST_GS["ho"], SP_ST_GS["vo"]);
+	SP_ST_rangetimer:SetPoint("RIGHT", "SP_ST_FrameRange", "RIGHT", -2, 0)
+	SP_ST_rangetimer:SetFont("Fonts\\FRIZQT__.TTF", SP_ST_GS["h"])
+	SP_ST_rangetimer:SetTextColor(1,1,1,1);
+	if (SP_ST_GS["bg"] ~= 0) then SP_ST_Frame:SetBackdrop(default_bg3) else SP_ST_Range:SetBackdrop(nil) end
+	-- if (SP_ST_GS["bg"] ~= 0) then SP_ST_FrameOFF:SetBackdrop(default_bg2) else SP_ST_FrameOFF:SetBackdrop(nil) end
+
 	if (SP_ST_GS["icons"] ~= 0) then
 		SP_ST_mainhand:SetTexture(GetInventoryItemTexture("player", GetInventorySlotInfo("MainHandSlot")));
 		SP_ST_mainhand:SetHeight(SP_ST_GS["h"]+1);
@@ -261,71 +278,100 @@ local function UpdateAppearance()
 		SP_ST_offhand:SetHeight(SP_ST_GS["h"]+1);
 		SP_ST_offhand:SetWidth(SP_ST_GS["h"]+1);
 		-- SP_ST_offhand:SetDrawLayer("OVERLAY");
+		SP_ST_range:SetTexture(GetInventoryItemTexture("player", GetInventorySlotInfo("RangedSlot")));
+		SP_ST_range:SetHeight(SP_ST_GS["h"]+1);
+		SP_ST_range:SetWidth(SP_ST_GS["h"]+1);
+		-- SP_ST_offhand:SetDrawLayer("OVERLAY");
 	else 
 		SP_ST_mainhand:SetTexture(nil);
 		SP_ST_mainhand:SetWidth(0);
 		SP_ST_offhand:SetTexture(nil);
 		SP_ST_offhand:SetWidth(0);
+		SP_ST_range:SetTexture(nil);
+		SP_ST_range:SetWidth(0);
 	end
 
 	if (SP_ST_GS["timers"] ~= 0) then
 		SP_ST_maintimer:Show();
 		SP_ST_offtimer:Show();
+		SP_ST_rangetimer:Show();
 	else
 		SP_ST_maintimer:Hide();
 		SP_ST_offtimer:Hide();
+		SP_ST_rangetimer:Hide();
 	end
 	
 	SP_ST_FrameTime:ClearAllPoints()
 	SP_ST_FrameTime2:ClearAllPoints()
+	SP_ST_FrameTime3:ClearAllPoints()
 
 	local style = SP_ST_GS["style"]
 	if style == 1 or style == 2 then
 		SP_ST_mainhand:SetPoint("LEFT", "SP_ST_Frame", "LEFT");
 		SP_ST_offhand:SetPoint("LEFT", "SP_ST_FrameOFF", "LEFT");
+		SP_ST_range:SetPoint("LEFT", "SP_ST_FrameRange", "LEFT");
 		SP_ST_FrameTime:SetPoint("LEFT", "SP_ST_mainhand", "LEFT")
 		SP_ST_FrameTime2:SetPoint("LEFT", "SP_ST_FrameOFF", "LEFT")
+		SP_ST_FrameTime3:SetPoint("LEFT", "SP_ST_FrameRange", "LEFT")
 	elseif style == 3 or style == 4 then
 		SP_ST_mainhand:SetPoint("RIGHT", "SP_ST_Frame", "RIGHT");
 		SP_ST_offhand:SetPoint("RIGHT", "SP_ST_FrameOFF", "RIGHT");
+		SP_ST_range:SetPoint("RIGHT", "SP_ST_FrameRange", "RIGHT");
 		SP_ST_FrameTime:SetPoint("RIGHT", "SP_ST_mainhand", "RIGHT")
 		SP_ST_FrameTime2:SetPoint("RIGHT", "SP_ST_offhand", "RIGHT")
+		SP_ST_FrameTime3:SetPoint("RIGHT", "SP_ST_offrange", "RIGHT")
 	else
 		SP_ST_mainhand:SetTexture(nil);
 		SP_ST_mainhand:SetWidth(0);
 		SP_ST_offhand:SetTexture(nil);
 		SP_ST_offhand:SetWidth(0);
+		SP_ST_range:SetTexture(nil);
+		SP_ST_range:SetWidth(0);
 		SP_ST_FrameTime:SetPoint("CENTER", "SP_ST_Frame", "CENTER")
 		SP_ST_FrameTime2:SetPoint("CENTER", "SP_ST_FrameOFF", "CENTER")
+		SP_ST_FrameTime3:SetPoint("CENTER", "SP_ST_FrameRange", "CENTER")
 	end
 
 	SP_ST_Frame:SetWidth(SP_ST_GS["w"])
 	SP_ST_Frame:SetHeight(SP_ST_GS["h"])
 	SP_ST_FrameOFF:SetWidth(SP_ST_GS["w"])
 	SP_ST_FrameOFF:SetHeight(SP_ST_GS["h"])
+	SP_ST_FrameRange:SetWidth(SP_ST_GS["w"])
+	SP_ST_FrameRange:SetHeight(SP_ST_GS["h"])
 
 	SP_ST_FrameTime:SetWidth(SP_ST_GS["w"] - SP_ST_mainhand:GetWidth())
 	SP_ST_FrameTime:SetHeight(SP_ST_GS["h"] - SP_ST_GS["b"])
 	SP_ST_FrameTime2:SetWidth(SP_ST_GS["w"] - SP_ST_offhand:GetWidth())
 	SP_ST_FrameTime2:SetHeight(SP_ST_GS["h"] - SP_ST_GS["b"])
+	SP_ST_FrameTime3:SetWidth(SP_ST_GS["w"] - SP_ST_range:GetWidth())
+	SP_ST_FrameTime3:SetHeight(SP_ST_GS["h"] - SP_ST_GS["b"])
 
 	SP_ST_Frame:SetAlpha(SP_ST_GS["a"])
 	SP_ST_Frame:SetScale(SP_ST_GS["s"])
 	SP_ST_FrameOFF:SetAlpha(SP_ST_GS["a"])
 	SP_ST_FrameOFF:SetScale(SP_ST_GS["s"])
+	SP_ST_FrameRange:SetAlpha(SP_ST_GS["a"])
+	SP_ST_FrameRange:SetScale(SP_ST_GS["s"])
 end
 
-local function GetWeaponSpeed(off)
+local function GetWeaponSpeed(off,ranged)
 	local speedMH, speedOH = UnitAttackSpeed("player")
-	if (off) then 
-		return speedOH; 
+	if off and not ranged then
+		return speedOH
+	elseif not off and ranged then
+		local rangedAttackSpeed, minDamage, maxDamage, physicalBonusPos, physicalBonusNeg, percent = UnitRangedDamage("player")
+		return rangedAttackSpeed
 	else
-		return speedMH;
+		return speedMH
 	end
 end
 
 local function isDualWield()
-	return (GetWeaponSpeed(true) ~= nil);
+	return (GetWeaponSpeed(true) ~= nil)
+end
+
+local function hasRanged()
+	return (GetWeaponSpeed(nil,true) ~= nil)
 end
 
 local function ShouldResetTimer(off)
@@ -359,36 +405,46 @@ local function UpdateWeapon()
 		if (SP_ST_GS["icons"] ~= 0) then
 			SP_ST_offhand:SetTexture(GetInventoryItemTexture("player", GetInventorySlotInfo("SecondaryHandSlot")));
 		end
-	else SP_ST_FrameOFF:Hide();
+	else
+		SP_ST_FrameOFF:Hide()
+	end
+	if hasRanged() then
+		range = GetInventoryItemLink("player", GetInventorySlotInfo("RangedSlot"))
+		if (SP_ST_GS["icons"] ~= 0) then
+			SP_ST_range:SetTexture(GetInventoryItemTexture("player", GetInventorySlotInfo("RangedSlot")))
+		end
+	else
+		SP_ST_FrameRange:Hide()
 	end
 end
 
-local function ResetTimer(off)
-	if (not off) then
+local function ResetTimer(off,ranged)
+	if not off and not ranged then
 		st_timerMax = GetWeaponSpeed(off)
 		st_timer = GetWeaponSpeed(off)
-		-- if (isDualWield() and st_timerOff < 0.2) then
-		-- 	st_timerOff = 0.2;
-		-- end
-	else
+	elseif off and not ranged then
 		st_timerOffMax = GetWeaponSpeed(off)
 		st_timerOff = GetWeaponSpeed(off)
-		-- if (isDualWield() and st_timer < 0.2) then
-		-- 	st_timer = 0.2;
-		-- end
+	else
+		range_fader = GetTime()
+		st_timerRangeMax = GetWeaponSpeed(false,true)
+		st_timerRange = GetWeaponSpeed(false,true)
 	end
 
-	SP_ST_Frame:Show()
+	if not off and not ranged then SP_ST_Frame:Show() end
 	if (isDualWield()) then SP_ST_FrameOFF:Show() end
+	if (hasRanged()) then SP_ST_FrameRange:Show() end
 end
 
 local function TestShow()
 	ResetTimer(false)
 end
 
+
 local function UpdateDisplay()
 	local style = SP_ST_GS["style"]
 	local show_oh = SP_ST_GS["show_oh"]
+	local show_range = SP_ST_GS["show_range"]
 	if SP_ST_InRange() then
 		SP_ST_FrameTime:SetVertexColor(1.0, 1.0, 1.0);
 		SP_ST_FrameTime2:SetVertexColor(1.0, 1.0, 1.0);
@@ -399,6 +455,17 @@ local function UpdateDisplay()
 		SP_ST_FrameTime2:SetVertexColor(1.0, 0, 0);
 		SP_ST_Frame:SetBackdropColor(1,0,0,0.8);
 		SP_ST_FrameOFF:SetBackdropColor(1,0,0,0.8);
+	end
+	if CheckInteractDistance("target",4) then
+		SP_ST_FrameTime3:SetVertexColor(1.0, 1.0, 1.0);
+		SP_ST_FrameRange:SetBackdropColor(0,0,0,0.8);
+	else
+		SP_ST_FrameTime3:SetVertexColor(1.0, 0, 0);
+		SP_ST_FrameRange:SetBackdropColor(1,0,0,0.8);
+	end
+	-- most classes won't want ranged indicator to stay up all the time
+	if GetTime() - 10 > range_fader then
+		SP_ST_FrameRange:Hide()
 	end
 
 	if (st_timer <= 0) then
@@ -433,6 +500,44 @@ local function UpdateDisplay()
 			SP_ST_maintimer:SetText(showtmr);
 		end
 	end
+
+	if (hasRanged() and show_range) then
+		if (st_timerRange <= 0) then
+			if style == 2 or style == 4 or style == 6 then
+				--nothing
+			else
+				SP_ST_FrameTime3:Hide()
+			end
+
+			if (not combat and not configmod) then
+				SP_ST_FrameRange:Hide()
+			end
+		else
+			SP_ST_FrameTime3:Show()
+			local width = SP_ST_GS["w"]
+			local size2 = (st_timerRange / st_timerRangeMax) * width
+			if style == 2 or style == 4 or style == 6 then
+				size2 = width - size2
+			end
+			if (size2 > width) then
+				size2 = width
+				SP_ST_FrameTime3:SetTexture(1, 0.8, 0.8, 1)
+			else
+				SP_ST_FrameTime3:SetTexture(1, 1, 1, 1)
+			end
+			SP_ST_FrameTime3:SetWidth(size2)
+			if (SP_ST_GS["timers"] ~= 0) then
+				local showtmr = sp_round(st_timerRange, 1);
+				if (math.floor(showtmr) == showtmr) then
+					showtmr = showtmr..".0";
+				end
+				SP_ST_rangetimer:SetText(showtmr);
+			end
+		end
+	else
+		SP_ST_FrameRange:Hide()
+	end
+
 	if (isDualWield() and show_oh) then
 		if (st_timerOff <= 0) then
 			if style == 2 or style == 4 or style == 6 then
@@ -440,7 +545,7 @@ local function UpdateDisplay()
 			else
 				SP_ST_FrameTime2:Hide()
 			end
-	
+
 			if (not combat and not configmod) then
 				SP_ST_FrameOFF:Hide()
 			end
@@ -529,6 +634,7 @@ local instants = {
 
 	["Wing Clip"] = 1,
 	["Disengage"] = 1,
+	["Carve"] = 1, -- twow
 	-- ["Counterattack"] = 1, -- maybe
 }
 
@@ -598,6 +704,7 @@ function SP_ST_OnEvent()
 		end
 		default_bg1 = SP_ST_Frame:GetBackdrop()
 		default_bg2 = SP_ST_FrameOFF:GetBackdrop()
+		default_bg3 = SP_ST_FrameRange:GetBackdrop()
 
 		if (SP_ST_GS ~= nil) then 
 			for k,v in pairs(defaults) do
@@ -612,6 +719,7 @@ function SP_ST_OnEvent()
 		UpdateAppearance()
 		if not st_timerMax then st_timerMax = GetWeaponSpeed(false) end
 		if not st_timerOffMax and isDualWield() then st_timerOffMax = GetWeaponSpeed(true) end
+		if not st_timerRangeMax and isDualWield() then st_timerRangeMax = GetWeaponSpeed(nil,true) end
 		print("SP_SwingTimer " .. version .. " loaded. Options: /st")
 	elseif (event == "PLAYER_REGEN_ENABLED")
 		or (event == "PLAYER_ENTERING_WORLD") then
@@ -672,7 +780,21 @@ function SP_ST_OnEvent()
 			end
 			flurry_count = flurry_count - 1 -- swing occured, reduce flurry counter
 			return
+		elseif arg3 == "CAST" and arg4 == 5019 then
+		-- wand shoot, treat wand as offhand, no reason no to
+			ResetTimer(nil,true)
+			return
 		end
+	  if SpellInfo(arg4) == "Slam" then
+			if arg3 == "START" then
+				paused_swing = st_timer
+			else --fail
+				st_timer = paused_swing
+				paused_swing = nil
+			end
+			return
+		end
+
 		local spellname = SpellInfo(arg4)
 		for _,v in L['combatSpells'] do
 			if spellname == v and arg3 == "CAST" then
@@ -696,6 +818,7 @@ function SP_ST_OnEvent()
 		if (arg1 == "player") then
 			local oldWep = weapon
 			local oldOff = offhand
+			local oldRange = range
 
 			UpdateWeapon()
 			if (combat and oldWep ~= weapon) then
@@ -710,6 +833,11 @@ function SP_ST_OnEvent()
 					ResetTimer(true)
 				end
 			end
+
+			if (combat and oldRange ~= range) then
+				ResetTimer(nil,true)
+			end
+
 		end
 
 	elseif (event == "CHAT_MSG_COMBAT_CREATURE_VS_SELF_MISSES") or (event == "CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE") or (event == "CHAT_MSG_COMBAT_HOSTILEPLAYER_MISSES") or (event == "CHAT_MSG_SPELL_HOSTILEPLAYER_DAMAGE") then
@@ -742,7 +870,7 @@ function SP_ST_OnEvent()
 end
 
 function SP_ST_OnUpdate(delta)
-	if (st_timer > 0) then
+	if (st_timer > 0) and not paused_swing then
 		st_timer = st_timer - delta
 		if (st_timer < 0) then
 			st_timer = 0
@@ -752,6 +880,12 @@ function SP_ST_OnUpdate(delta)
 		st_timerOff = st_timerOff - delta
 		if (st_timerOff < 0) then
 			st_timerOff = 0
+		end
+	end
+	if (st_timerRange > 0) then
+		st_timerRange = st_timerRange - delta
+		if (st_timerRange < 0) then
+			st_timerRange = 0
 		end
 	end
 	UpdateDisplay()
@@ -790,6 +924,9 @@ local function ChatHandler(msg)
 	elseif cmd == "offhand" then
 		SP_ST_GS["show_oh"] = not SP_ST_GS["show_oh"]
 		print("toggled showing offhand: " .. (SP_ST_GS["show_oh"] and "on" or "off"))
+	elseif cmd == "range" then
+		SP_ST_GS["show_range"] = not SP_ST_GS["show_range"]
+		print("toggled showing range weapon: " .. (SP_ST_GS["show_range"] and "on" or "off"))
 	elseif settings[cmd] ~= nil then
 		if arg ~= nil then
 			local number = tonumber(arg)
@@ -808,6 +945,7 @@ local function ChatHandler(msg)
 				SLASH_SPSWINGTIMER1, k, SP_ST_GS[k], v))
 		end
 		print("/st offhand (Toggle offhand display)")
+		print("/st range (Toggle range wep display)")
 	end
 	TestShow()
 end

@@ -90,4 +90,37 @@
 			</Layer>
 		</Layers>
 	</Frame>
+	<Frame name="SP_ST_FrameRange" parent="UIParent" hidden="true">
+		<Size>
+			<AbsDimension x="200" y="10" />
+		</Size>
+
+		<Backdrop bgFile="Interface\Tooltips\UI-Tooltip-Background">
+		</Backdrop>
+
+		<Layers>
+			<Layer level="ARTWORK">
+				<Texture name="SP_ST_range">
+					<Size>
+						<AbsDimension x="10" y="10" />
+					</Size>
+					<Anchors>
+						<Anchor point="LEFT">
+						</Anchor>
+					</Anchors>
+				</Texture>
+				<Texture name="SP_ST_FrameTime3">
+					<Size>
+						<AbsDimension x="200" y="10" />
+					</Size>
+					<Anchors>
+						<Anchor point="CENTER">
+						</Anchor>
+					</Anchors>
+				</Texture>
+				<FontString name="SP_ST_rangetimer" justifyH="RIGHT" justifyV="MIDDLE">
+				</FontString>
+			</Layer>
+		</Layers>
+	</Frame>
 </Ui>
