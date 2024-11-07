@@ -1,5 +1,5 @@
 
-local version = "5.0.0"
+local version = "6.0.0"
 
 local defaults = {
 	x = 0,
@@ -100,8 +100,7 @@ loc["enUS"] = {
 		-- Slam = "Slam",
 		RS = "Raptor Strike",
 		Maul = "Maul",
-		HolyStrike = "Holy Strike", -- Turtle wow
-		RaptorStrike = "Raptor Strike", -- Turtle wow
+		-- HolyStrike = "Holy Strike", -- Turtle wow
 		MongooseBite = "Mongoose Bite", -- Turtle wow
 	}
 }
@@ -117,7 +116,7 @@ loc["frFR"] = {
 		-- Slam = "Heurtoir",
 		RS = "Attaque du raptor",
 		Maul = "Mutiler",
-		HolyStrike = "Frappe sacrée" -- Tortue wow
+		-- HolyStrike = "Frappe sacrée" -- Tortue wow
 	}
 }
 local L = loc[GetLocale()];
@@ -732,7 +731,7 @@ function SP_ST_OnEvent()
 
 	elseif (event == "PLAYER_REGEN_DISABLED") then
 		combat = true
-
+		CheckFlurry()
 	elseif (event == "PLAYER_ENTER_COMBAT") then
 		if isDualWield() then ResetTimer(true) end
 		flurry_count = CheckFlurry()
@@ -750,7 +749,6 @@ function SP_ST_OnEvent()
 			-- print("swing, flurry "..flurry_count..(flurry_fresh and ", is fresh" or ""))
 			if arg3 == "MAINHAND" then
 				-- print(format("mh %.3f",GetWeaponSpeed(false)))
-				last_hit_mh = true
 				-- print("mainhand hit")
 				ResetTimer(false)
 
@@ -765,7 +763,6 @@ function SP_ST_OnEvent()
 				end
 			elseif arg3 == "OFFHAND" then
 				-- print(format("oh %.3f",GetWeaponSpeed(true)))
-				last_hit_mh = false
 				-- print("offhand hit")
 				ResetTimer(true)
 
@@ -804,21 +801,25 @@ function SP_ST_OnEvent()
 		local spellname = SpellInfo(arg4)
 		for _,v in L['combatSpells'] do
 			if spellname == v and arg3 == "CAST" then
-				-- print(spellname)
-				last_hit_mh = true
-				-- print("mainhand hit")
+				-- print(spellname .. " " .. flurry_count)
+				-- print(format("sp %.3f",GetWeaponSpeed(false)) .. " " .. flurry_count)
 				ResetTimer(false)
 				if flurry_fresh then
 					st_timer = st_timer / 1.3
 					st_timerMax = st_timerMax / 1.3
 				end
+				if flurry_count == 0 then -- used up last flurry
+					st_timer = st_timer * 1.3
+					st_timerMax = st_timerMax * 1.3
+				end
+				flurry_count = flurry_count - 1 -- swing occured, reduce flurry counter
 				return
 			end
 		end
-		if spellname == "Flurry" and flurry_fresh == nil then
-			flurry_fresh = true
+		-- if spellname == "Flurry" and flurry_fresh == nil then
+			-- flurry_fresh = true
       -- print("wasflurry cast: ".. GetTime())
-		end
+		-- end
 
 	elseif (event == "UNIT_INVENTORY_CHANGED") then
 		if (arg1 == "player") then
