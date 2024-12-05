@@ -266,7 +266,7 @@ local function UpdateAppearance()
 	SP_ST_rangetimer:SetPoint("RIGHT", "SP_ST_FrameRange", "RIGHT", -2, 0)
 	SP_ST_rangetimer:SetFont("Fonts\\FRIZQT__.TTF", SP_ST_GS["h"])
 	SP_ST_rangetimer:SetTextColor(1,1,1,1);
-	if (SP_ST_GS["bg"] ~= 0) then SP_ST_Frame:SetBackdrop(default_bg3) else SP_ST_Range:SetBackdrop(nil) end
+	if (SP_ST_GS["bg"] ~= 0) then SP_ST_Frame:SetBackdrop(default_bg3) else SP_ST_Frame:SetBackdrop(nil) end
 	-- if (SP_ST_GS["bg"] ~= 0) then SP_ST_FrameOFF:SetBackdrop(default_bg2) else SP_ST_FrameOFF:SetBackdrop(nil) end
 
 	if (SP_ST_GS["icons"] ~= 0) then
