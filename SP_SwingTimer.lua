@@ -254,20 +254,19 @@ local function UpdateAppearance()
 	SP_ST_maintimer:SetPoint("RIGHT", "SP_ST_Frame", "RIGHT", -2, 0)
 	SP_ST_maintimer:SetFont("Fonts\\FRIZQT__.TTF", SP_ST_GS["h"])
 	SP_ST_maintimer:SetTextColor(1,1,1,1);
+	if (SP_ST_GS["bg"] ~= 0) then SP_ST_Frame:SetBackdrop(default_bg1) else SP_ST_Frame:SetBackdrop(nil) end
 
 	SP_ST_FrameOFF:SetPoint("TOPLEFT", "SP_ST_Frame", "BOTTOMLEFT", SP_ST_GS["ho"], SP_ST_GS["vo"]);
 	SP_ST_offtimer:SetPoint("RIGHT", "SP_ST_FrameOFF", "RIGHT", -2, 0)
 	SP_ST_offtimer:SetFont("Fonts\\FRIZQT__.TTF", SP_ST_GS["h"])
 	SP_ST_offtimer:SetTextColor(1,1,1,1);
-	if (SP_ST_GS["bg"] ~= 0) then SP_ST_Frame:SetBackdrop(default_bg1) else SP_ST_Frame:SetBackdrop(nil) end
 	if (SP_ST_GS["bg"] ~= 0) then SP_ST_FrameOFF:SetBackdrop(default_bg2) else SP_ST_FrameOFF:SetBackdrop(nil) end
 
 	SP_ST_FrameRange:SetPoint("TOPLEFT", "SP_ST_FrameOFF", "BOTTOMLEFT", SP_ST_GS["ho"], SP_ST_GS["vo"]);
 	SP_ST_rangetimer:SetPoint("RIGHT", "SP_ST_FrameRange", "RIGHT", -2, 0)
 	SP_ST_rangetimer:SetFont("Fonts\\FRIZQT__.TTF", SP_ST_GS["h"])
 	SP_ST_rangetimer:SetTextColor(1,1,1,1);
-	if (SP_ST_GS["bg"] ~= 0) then SP_ST_Frame:SetBackdrop(default_bg3) else SP_ST_Range:SetBackdrop(nil) end
-	-- if (SP_ST_GS["bg"] ~= 0) then SP_ST_FrameOFF:SetBackdrop(default_bg2) else SP_ST_FrameOFF:SetBackdrop(nil) end
+	if (SP_ST_GS["bg"] ~= 0) then SP_ST_FrameRange:SetBackdrop(default_bg3) else SP_ST_FrameRange:SetBackdrop(nil) end
 
 	if (SP_ST_GS["icons"] ~= 0) then
 		SP_ST_mainhand:SetTexture(GetInventoryItemTexture("player", GetInventorySlotInfo("MainHandSlot")));
@@ -311,15 +310,15 @@ local function UpdateAppearance()
 		SP_ST_offhand:SetPoint("LEFT", "SP_ST_FrameOFF", "LEFT");
 		SP_ST_range:SetPoint("LEFT", "SP_ST_FrameRange", "LEFT");
 		SP_ST_FrameTime:SetPoint("LEFT", "SP_ST_mainhand", "LEFT")
-		SP_ST_FrameTime2:SetPoint("LEFT", "SP_ST_FrameOFF", "LEFT")
-		SP_ST_FrameTime3:SetPoint("LEFT", "SP_ST_FrameRange", "LEFT")
+		SP_ST_FrameTime2:SetPoint("LEFT", "SP_ST_FrameOFF", "LEFT") -- ??
+		SP_ST_FrameTime3:SetPoint("LEFT", "SP_ST_FrameRange", "LEFT") -- ??
 	elseif style == 3 or style == 4 then
 		SP_ST_mainhand:SetPoint("RIGHT", "SP_ST_Frame", "RIGHT");
 		SP_ST_offhand:SetPoint("RIGHT", "SP_ST_FrameOFF", "RIGHT");
 		SP_ST_range:SetPoint("RIGHT", "SP_ST_FrameRange", "RIGHT");
-		SP_ST_FrameTime:SetPoint("RIGHT", "SP_ST_mainhand", "RIGHT")
-		SP_ST_FrameTime2:SetPoint("RIGHT", "SP_ST_offhand", "RIGHT")
-		SP_ST_FrameTime3:SetPoint("RIGHT", "SP_ST_offrange", "RIGHT")
+		SP_ST_FrameTime:SetPoint("RIGHT", "SP_ST_mainhand", "RIGHT") -- ??
+		SP_ST_FrameTime2:SetPoint("RIGHT", "SP_ST_offhand", "RIGHT") -- ??
+		SP_ST_FrameTime3:SetPoint("RIGHT", "SP_ST_range", "RIGHT") -- ??
 	else
 		SP_ST_mainhand:SetTexture(nil);
 		SP_ST_mainhand:SetWidth(0);
@@ -616,6 +615,7 @@ local instants = {
 	["Rend"] = 1,
 
 	["Crusader Strike"] = 1,
+	["Holy Strike"] = 1,
 
 	["Storm Strike"] = 1,
 
