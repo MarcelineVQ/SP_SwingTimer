@@ -611,7 +611,7 @@ local instants = {
 	["Taunt"] = 1,
 	["Mocking Blow"] = 1,
 	["Slam"] = 1,
-	["Decisive Strike"] = 1,
+	-- ["Decisive Strike"] = 1,
 	["Rend"] = 1,
 
 	["Crusader Strike"] = 1,
@@ -783,20 +783,20 @@ function SP_ST_OnEvent()
 			ResetTimer(nil,true)
 			return
 		end
-	  if SpellInfo(arg4) == "Slam" then
-			if arg3 == "START" then
-				paused_swing = st_timer
-				paused_swingOH = st_timerOff
-			else --fail
-				st_timer = paused_swing
-				st_timerOff = paused_swingOH
-				paused_swing = nil
-				paused_swingOH = nil
-				-- slam resets OH swing
-				-- ResetTimer(true)
-			end
-			return
-		end
+	  -- if SpellInfo(arg4) == "Slam" then
+		-- 	if arg3 == "START" then
+		-- 		paused_swing = st_timer
+		-- 		paused_swingOH = st_timerOff
+		-- 	else --fail
+		-- 		st_timer = paused_swing
+		-- 		st_timerOff = paused_swingOH
+		-- 		paused_swing = nil
+		-- 		paused_swingOH = nil
+		-- 		-- slam resets OH swing
+		-- 		-- ResetTimer(true)
+		-- 	end
+		-- 	return
+		-- end
 
 		local spellname = SpellInfo(arg4)
 		for _,v in L['combatSpells'] do
