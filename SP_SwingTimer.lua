@@ -647,9 +647,9 @@ function SP_ST_Check_Actions(slot)
 			local name,rank,texture = SpellInfo(identifier)
 			if instants[name] then
 				range_check_slot = i
+				return -- done
 			end
 		end
-		return
 	end
 
 	for i=1,120 do
