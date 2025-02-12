@@ -101,7 +101,7 @@ loc["enUS"] = {
 		RS = "Raptor Strike",
 		Maul = "Maul",
 		-- HolyStrike = "Holy Strike", -- Turtle wow
-		MongooseBite = "Mongoose Bite", -- Turtle wow
+		-- MongooseBite = "Mongoose Bite", -- Turtle wow
 	}
 }
 loc["frFR"] = {
@@ -728,18 +728,15 @@ function SP_ST_OnEvent()
 		CheckFlurry()
 		UpdateDisplay()
 		SP_ST_Check_Actions()
-
 	elseif (event == "PLAYER_REGEN_DISABLED") then
 		combat = true
 		CheckFlurry()
-	elseif (event == "PLAYER_ENTER_COMBAT") then
-		if isDualWield() then ResetTimer(true) end
-		flurry_count = CheckFlurry()
 	elseif (evet == "ACTIONBAR_SLOT_CHANGED") then
 		SP_ST_Check_Actions(arg1)
 	elseif (event == "UNIT_CASTEVENT" and arg1 == player_guid) then
 		local spell = SpellInfo(arg4)
 		if spell == "Flurry" then
+			-- print("newflur "..GetTime())
 			if flurry_count < 1 then -- track a completely fresh flurry for timing
 				flurry_fresh = true
 			end
@@ -748,6 +745,7 @@ function SP_ST_OnEvent()
 		if arg4 == 6603 then -- 6603 == autoattack then
 			-- print("swing, flurry "..flurry_count..(flurry_fresh and ", is fresh" or ""))
 			if arg3 == "MAINHAND" then
+				-- print("mainhand "..GetTime())
 				-- print(format("mh %.3f",GetWeaponSpeed(false)))
 				-- print("mainhand hit")
 				ResetTimer(false)
