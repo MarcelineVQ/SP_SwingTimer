@@ -5,6 +5,8 @@
 * * Requires a plain instant melee ability to be on your action bars.
 * Added `/st offhand` command to toggle off showing offhand swing.
 * Added `/st range` command to toggle off showing range swing, wands only right now.
+* Added `/st hs` command to toggle mainhand HS/Cleave queue display. 
+* * Requires correct icon or macro named "cleave", "heroicstrike", "heroic strike", or "hs".
 ___
 
 Author: EinBaum

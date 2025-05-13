@@ -1,5 +1,5 @@
 
-local version = "6.0.0"
+local version = "6.1.0"
 
 local defaults = {
 	x = 0,
@@ -18,6 +18,7 @@ local defaults = {
 	style = 2,
 	show_oh = true,
 	show_range = true,
+	show_hs = true,
 }
 
 local default_bg1 = nil
@@ -191,22 +192,49 @@ end
 
 local function UpdateHeroicStrike()
 	local _, class = UnitClass("player")
-	if class ~= "WARRIOR" then
+	if class ~= "WARRIOR" or not SP_ST_GS["show_hs"] then
 		return
 	end
-	TrackedActionSlots = {}
+	HeroicTrackedActionSlots = {}
 	local SPActionSlot = 0;
 	for SPActionSlot = 1, 120 do
 		local SPActionText = GetActionText(SPActionSlot);
 		local SPActionTexture = GetActionTexture(SPActionSlot);
 		
 		if SPActionTexture then
-			if (SPActionTexture == "Interface\\Icons\\Ability_Rogue_Ambush" or SPActionTexture == "Interface\\Icons\\Ability_Warrior_Cleave") then
-				tinsert(TrackedActionSlots, SPActionSlot);
+			if (SPActionTexture == "Interface\\Icons\\Ability_Rogue_Ambush") then
+				tinsert(HeroicTrackedActionSlots, SPActionSlot);
 			elseif SPActionText then
 				SPActionText = string.lower(SPActionText)
-				if (SPActionText == "cleave" or SPActionText == "heroic strike" or SPActionText == "heroicstrike" or SPActionText == "hs") then
-					tinsert(TrackedActionSlots, SPActionSlot);
+				if (SPActionText == "heroic strike" or SPActionText == "heroicstrike" or SPActionText == "hs") then
+					tinsert(HeroicTrackedActionSlots, SPActionSlot);
+				end
+			end
+		end
+	end
+
+end
+
+----------------------------------------------------------------------------------
+
+local function UpdateCleave()
+	local _, class = UnitClass("player")
+	if class ~= "WARRIOR" or not SP_ST_GS["show_hs"] then
+		return
+	end
+	CleaveTrackedActionSlots = {}
+	local SPActionSlot = 0;
+	for SPActionSlot = 1, 120 do
+		local SPActionText = GetActionText(SPActionSlot);
+		local SPActionTexture = GetActionTexture(SPActionSlot);
+		
+		if SPActionTexture then
+			if SPActionTexture == "Interface\\Icons\\Ability_Warrior_Cleave" then
+				tinsert(CleaveTrackedActionSlots, SPActionSlot);
+			elseif SPActionText then
+				SPActionText = string.lower(SPActionText)
+				if (SPActionText == "cleave") then
+					tinsert(CleaveTrackedActionSlots, SPActionSlot);				
 				end
 			end
 		end
@@ -217,15 +245,29 @@ end
 --------------------------------------------------------------------------------
 
 local function HeroicStrikeQueued()
-	if not getn(TrackedActionSlots) then
+	if not HeroicTrackedActionSlots or getn(HeroicTrackedActionSlots) == 0 then
 		return nil
 	end
-	for _, actionslotID in ipairs(TrackedActionSlots) do
+	for _, actionslotID in ipairs (HeroicTrackedActionSlots) do
 		if IsCurrentAction(actionslotID) then
 			return true
 		end
 	end
-	return nil
+	return false
+end
+
+------------------------------------------------------------------------------------
+
+local function CleaveQueued()
+	if not CleaveTrackedActionSlots or getn(CleaveTrackedActionSlots) == 0 then
+		return nil
+	end
+	for _, actionslotID in ipairs (CleaveTrackedActionSlots) do
+		if IsCurrentAction(actionslotID) then
+			return true
+		end
+	end
+	return false
 end
 
 --------------------------------------------------------------------------------
@@ -444,13 +486,20 @@ local function UpdateDisplay()
 	local style = SP_ST_GS["style"]
 	local show_oh = SP_ST_GS["show_oh"]
 	local show_range = SP_ST_GS["show_range"]
+	local show_hs = SP_ST_GS["show_hs"]
 	if SP_ST_InRange() then
-		SP_ST_FrameTime:SetVertexColor(1.0, 1.0, 1.0);
+		if show_hs and CleaveQueued() then
+			SP_ST_FrameTime:SetVertexColor(0.2, 0.9, 0.2); -- Green for Cleave
+		elseif show_hs and HeroicStrikeQueued() then
+			SP_ST_FrameTime:SetVertexColor(0.9, 0.9, 0.2); -- Yellow for Heroic Strike
+		else
+			SP_ST_FrameTime:SetVertexColor(1.0, 1.0, 1.0); -- White for Auto 
+		end
 		SP_ST_FrameTime2:SetVertexColor(1.0, 1.0, 1.0);
 		SP_ST_Frame:SetBackdropColor(0,0,0,0.8);
 		SP_ST_FrameOFF:SetBackdropColor(0,0,0,0.8);
 	else
-		SP_ST_FrameTime:SetVertexColor(1.0, 0, 0);
+		SP_ST_FrameTime:SetVertexColor(1.0, 0, 0); -- Red if out of range
 		SP_ST_FrameTime2:SetVertexColor(1.0, 0, 0);
 		SP_ST_Frame:SetBackdropColor(1,0,0,0.8);
 		SP_ST_FrameOFF:SetBackdropColor(1,0,0,0.8);
@@ -721,8 +770,15 @@ function SP_ST_OnEvent()
 		if not st_timerOffMax and isDualWield() then st_timerOffMax = GetWeaponSpeed(true) end
 		if not st_timerRangeMax and isDualWield() then st_timerRangeMax = GetWeaponSpeed(nil,true) end
 		print("SP_SwingTimer " .. version .. " loaded. Options: /st")
-	elseif (event == "PLAYER_REGEN_ENABLED")
-		or (event == "PLAYER_ENTERING_WORLD") then
+	elseif (event == "PLAYER_ENTERING_WORLD") then
+		_,player_guid = UnitExists("player")
+		if UnitAffectingCombat('player') then combat = true else combat = false end
+		CheckFlurry()
+		UpdateDisplay()
+		SP_ST_Check_Actions()
+		UpdateHeroicStrike()
+		UpdateCleave()
+	elseif (event == "PLAYER_REGEN_ENABLED") then
 		_,player_guid = UnitExists("player")
 		if UnitAffectingCombat('player') then combat = true else combat = false end
 		CheckFlurry()
@@ -731,8 +787,10 @@ function SP_ST_OnEvent()
 	elseif (event == "PLAYER_REGEN_DISABLED") then
 		combat = true
 		CheckFlurry()
-	elseif (evet == "ACTIONBAR_SLOT_CHANGED") then
+	elseif (event == "ACTIONBAR_SLOT_CHANGED") then
 		SP_ST_Check_Actions(arg1)
+		HeroicStrikeQueued()
+		CleaveQueued()
 	elseif (event == "UNIT_CASTEVENT" and arg1 == player_guid) then
 		local spell = SpellInfo(arg4)
 		if spell == "Flurry" then
@@ -932,6 +990,9 @@ local function ChatHandler(msg)
 	elseif cmd == "range" then
 		SP_ST_GS["show_range"] = not SP_ST_GS["show_range"]
 		print("toggled showing range weapon: " .. (SP_ST_GS["show_range"] and "on" or "off"))
+	elseif cmd == "hs" then
+		SP_ST_GS["show_hs"] = not SP_ST_GS["show_hs"]
+		print("toggled showing HS/Cleave queue display: " .. (SP_ST_GS["show_hs"] and "on" or "off"))
 	elseif settings[cmd] ~= nil then
 		if arg ~= nil then
 			local number = tonumber(arg)
@@ -951,6 +1012,7 @@ local function ChatHandler(msg)
 		end
 		print("/st offhand (Toggle offhand display)")
 		print("/st range (Toggle range wep display)")
+		print("/st hs (Toggle HS/Cleave queue display)")
 	end
 	TestShow()
 end
