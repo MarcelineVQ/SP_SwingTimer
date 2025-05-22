@@ -41,6 +41,11 @@ local settings = {
 	move = "Enable bars movement",
 }
 
+local flurry = {
+	WARRIOR = {10, 15, 20, 25, 30},
+	SHAMAN  = { 8, 11, 14, 17, 20},
+}
+
 local armorDebuffs = {
 	["Interface\\Icons\\Ability_Warrior_Sunder"] = 450, 
 	["Interface\\Icons\\Spell_Shadow_Unholystrength"] = 640, 
@@ -74,6 +79,8 @@ local range = nil
 local combat = false
 local configmod = false;
 local player_guid = nil
+local player_class = nil
+local flurry_mult = 0
 local paused_swing = nil
 local paused_swingOH = nil
 st_timer = 0
@@ -83,8 +90,10 @@ st_timerOffMax = 1
 st_timerRange = 0
 st_timerRangeMax = 1
 local range_fader = 0
+local ele_flurry_fresh = nil
 local flurry_fresh = nil
 local flurry_count = -1
+local wf_swings = 0
 
 --------------------------------------------------------------------------------
 local loc = {};
@@ -681,6 +690,26 @@ function rangecheck()
 	print(SP_ST_InRange() and "yes" or "no")
 end
 
+function GetFlurry(class)
+	-- default multiplier
+	flurry_mult = 1.3
+
+	for page = 1, 3 do
+		for talent = 1, 100 do
+			local name, _, _, _, count = GetTalentInfo(page, talent)
+			if not name then break end
+			if name == "Flurry" then
+				if count == 0 then
+					flurry_mult = 1
+				else
+					flurry_mult = 1 + (flurry[class][count] or 0) / 100
+				end
+				return
+			end
+		end
+	end
+end
+
 function SP_ST_OnLoad()
 	this:RegisterEvent("ADDON_LOADED")
 	this:RegisterEvent("PLAYER_REGEN_ENABLED")
@@ -690,12 +719,13 @@ function SP_ST_OnLoad()
 	this:RegisterEvent("CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE")
 	this:RegisterEvent("CHAT_MSG_COMBAT_HOSTILEPLAYER_MISSES")
 	this:RegisterEvent("CHAT_MSG_SPELL_HOSTILEPLAYER_DAMAGE")
+	this:RegisterEvent("CHARACTER_POINTS_CHANGED")
 	this:RegisterEvent("UNIT_CASTEVENT")
 	-- this:RegisterEvent("UNIT_AURA")
 	-- this:RegisterEvent("PLAYER_AURAS_CHANGED")
 	this:RegisterEvent("PLAYER_ENTERING_WORLD")
 	this:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
-	end
+end
 
 function SP_ST_OnEvent()
 	if (event == "ADDON_LOADED" and arg1 == "SP_SwingTimer") then
@@ -724,100 +754,112 @@ function SP_ST_OnEvent()
 	elseif (event == "PLAYER_REGEN_ENABLED")
 		or (event == "PLAYER_ENTERING_WORLD") then
 		_,player_guid = UnitExists("player")
+		_,player_class = UnitClass("player")
 		if UnitAffectingCombat('player') then combat = true else combat = false end
+
+		GetFlurry(player_class)
 		CheckFlurry()
 		UpdateDisplay()
 		SP_ST_Check_Actions()
 	elseif (event == "PLAYER_REGEN_DISABLED") then
 		combat = true
+		wf_swings = 0
 		CheckFlurry()
+	elseif (event == "CHARACTER_POINTS_CHANGED") then
+		GetFlurry(player_class)
 	elseif (evet == "ACTIONBAR_SLOT_CHANGED") then
 		SP_ST_Check_Actions(arg1)
 	elseif (event == "UNIT_CASTEVENT" and arg1 == player_guid) then
 		local spell = SpellInfo(arg4)
-		if spell == "Flurry" then
-			-- print("newflur "..GetTime())
-			if flurry_count < 1 then -- track a completely fresh flurry for timing
-				flurry_fresh = true
-			end
-			flurry_count = 3
+		-- print(spell .. " "..arg4)
+
+		-- wf proc happens first, then the normal hit, then the 1-2 wf hits
+		-- if flurry_count > 0 then
+		if (arg4 == 51368 or arg4 == 16361) then
+			wf_swings = wf_swings + ((arg4 == 51368) and 1 or 2)
+			return
 		end
-		if arg4 == 6603 then -- 6603 == autoattack then
-			-- print("swing, flurry "..flurry_count..(flurry_fresh and ", is fresh" or ""))
+
+		if spell == "Flurry" then
+			-- track a completely fresh flurry for timing
+			flurry_fresh = flurry_count < 1
+			flurry_count = 3
+			return
+		end
+
+		if spell == "Elemental Flurry" then
+			ele_flurry_fresh = true
+		end
+
+		if arg4 == 6603 then -- autoattack
 			if arg3 == "MAINHAND" then
-				-- print("mainhand "..GetTime())
-				-- print(format("mh %.3f",GetWeaponSpeed(false)))
-				-- print("mainhand hit")
 				ResetTimer(false)
 
-				if flurry_fresh then -- fresh flurry, decrease the swing cooldown of the next swing
+				if ele_flurry_fresh then
 					st_timer = st_timer / 1.3
 					st_timerMax = st_timerMax / 1.3
+					ele_flurry_fresh = false
+				end
+				if not ele_flurry_fresh and ele_flurry_fresh ~= nil then
+					st_timer = st_timer * 1.3
+					st_timerMax = st_timerMax * 1.3
+					ele_flurry_fresh = nil
+				end
+
+				if flurry_fresh then -- fresh flurry, decrease the swing cooldown of the next swing
+					st_timer = st_timer / flurry_mult
+					st_timerMax = st_timerMax / flurry_mult
 					flurry_fresh = false
 				end
 				if flurry_count == 0 then -- used up last flurry
-					st_timer = st_timer * 1.3
-					st_timerMax = st_timerMax * 1.3
+					st_timer = st_timer * flurry_mult
+					st_timerMax = st_timerMax * flurry_mult
 				end
 			elseif arg3 == "OFFHAND" then
-				-- print(format("oh %.3f",GetWeaponSpeed(true)))
-				-- print("offhand hit")
 				ResetTimer(true)
 
 				if flurry_fresh then -- fresh flurry, decrease the swing cooldown of the next swing
-					st_timerOff = st_timerOff / 1.3
-					st_timerOffMax = st_timerOffMax / 1.3
+					st_timerOff = st_timerOff / flurry_mult
+					st_timerOffMax = st_timerOffMax / flurry_mult
 					flurry_fresh = false
 				end
 				if flurry_count == 0 then -- used up last flurry
-					st_timerOff = st_timerOff * 1.3
-					st_timerOffMax = st_timerOffMax * 1.3
+					st_timerOff = st_timerOff * flurry_mult
+					st_timerOffMax = st_timerOffMax * flurry_mult
 				end
 			end
-			flurry_count = flurry_count - 1 -- swing occured, reduce flurry counter
+			-- print(GetTime() .. " normal swing "..flurry_count)
+			-- print(GetTime() .. " wf_swing "..wf_swings)
+			if wf_swings > 0 then
+				wf_swings = wf_swings - 1
+			else
+				flurry_count = flurry_count - 1 -- normal swing occured, reduce flurry counter
+			end
 			return
 		elseif arg3 == "CAST" and arg4 == 5019 then
-		-- wand shoot, treat wand as offhand, no reason no to
+			-- wand shoot, treat wand as offhand, no reason no to
 			ResetTimer(nil,true)
 			return
 		end
-	  -- if SpellInfo(arg4) == "Slam" then
-		-- 	if arg3 == "START" then
-		-- 		paused_swing = st_timer
-		-- 		paused_swingOH = st_timerOff
-		-- 	else --fail
-		-- 		st_timer = paused_swing
-		-- 		st_timerOff = paused_swingOH
-		-- 		paused_swing = nil
-		-- 		paused_swingOH = nil
-		-- 		-- slam resets OH swing
-		-- 		-- ResetTimer(true)
-		-- 	end
-		-- 	return
-		-- end
 
-		local spellname = SpellInfo(arg4)
+		-- check for attacks that take the place of autoattack
 		for _,v in L['combatSpells'] do
-			if spellname == v and arg3 == "CAST" then
+			if spell == v and arg3 == "CAST" then
 				-- print(spellname .. " " .. flurry_count)
 				-- print(format("sp %.3f",GetWeaponSpeed(false)) .. " " .. flurry_count)
 				ResetTimer(false)
 				if flurry_fresh then
-					st_timer = st_timer / 1.3
-					st_timerMax = st_timerMax / 1.3
+					st_timer = st_timer / flurry_mult
+					st_timerMax = st_timerMax / flurry_mult
 				end
 				if flurry_count == 0 then -- used up last flurry
-					st_timer = st_timer * 1.3
-					st_timerMax = st_timerMax * 1.3
+					st_timer = st_timer * flurry_mult
+					st_timerMax = st_timerMax * flurry_mult
 				end
 				flurry_count = flurry_count - 1 -- swing occured, reduce flurry counter
 				return
 			end
 		end
-		-- if spellname == "Flurry" and flurry_fresh == nil then
-			-- flurry_fresh = true
-      -- print("wasflurry cast: ".. GetTime())
-		-- end
 
 	elseif (event == "UNIT_INVENTORY_CHANGED") then
 		if (arg1 == "player") then
