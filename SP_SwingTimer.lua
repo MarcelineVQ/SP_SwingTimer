@@ -626,7 +626,8 @@ local instants = {
 	["Crusader Strike"] = 1,
 	["Holy Strike"] = 1,
 
-	["Storm Strike"] = 1,
+	["Stormstrike"] = 1,
+	["Lightning Strike"] = 1,
 
 	["Savage Bite"] = 1,
 	["Growl"] = 1,
