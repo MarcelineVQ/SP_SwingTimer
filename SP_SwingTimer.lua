@@ -309,25 +309,29 @@ local function UpdateAppearance()
 		SP_ST_rangetimer:Hide();
 	end
 	
+	SP_ST_mainhand:ClearAllPoints()
+	SP_ST_offhand:ClearAllPoints()
+	SP_ST_range:ClearAllPoints()
 	SP_ST_FrameTime:ClearAllPoints()
 	SP_ST_FrameTime2:ClearAllPoints()
 	SP_ST_FrameTime3:ClearAllPoints()
 
 	local style = SP_ST_GS["style"]
+	local iconW = (SP_ST_GS["icons"] ~= 0) and (SP_ST_GS["h"]+1) or 0
 	if style == 1 or style == 2 then
 		SP_ST_mainhand:SetPoint("LEFT", "SP_ST_Frame", "LEFT");
 		SP_ST_offhand:SetPoint("LEFT", "SP_ST_FrameOFF", "LEFT");
 		SP_ST_range:SetPoint("LEFT", "SP_ST_FrameRange", "LEFT");
-		SP_ST_FrameTime:SetPoint("LEFT", "SP_ST_mainhand", "LEFT")
-		SP_ST_FrameTime2:SetPoint("LEFT", "SP_ST_FrameOFF", "LEFT") -- ??
-		SP_ST_FrameTime3:SetPoint("LEFT", "SP_ST_FrameRange", "LEFT") -- ??
+		SP_ST_FrameTime:SetPoint("LEFT", "SP_ST_Frame", "LEFT", iconW, 0)
+		SP_ST_FrameTime2:SetPoint("LEFT", "SP_ST_FrameOFF", "LEFT", iconW, 0)
+		SP_ST_FrameTime3:SetPoint("LEFT", "SP_ST_FrameRange", "LEFT", iconW, 0)
 	elseif style == 3 or style == 4 then
 		SP_ST_mainhand:SetPoint("RIGHT", "SP_ST_Frame", "RIGHT");
 		SP_ST_offhand:SetPoint("RIGHT", "SP_ST_FrameOFF", "RIGHT");
 		SP_ST_range:SetPoint("RIGHT", "SP_ST_FrameRange", "RIGHT");
-		SP_ST_FrameTime:SetPoint("RIGHT", "SP_ST_mainhand", "RIGHT") -- ??
-		SP_ST_FrameTime2:SetPoint("RIGHT", "SP_ST_offhand", "RIGHT") -- ??
-		SP_ST_FrameTime3:SetPoint("RIGHT", "SP_ST_range", "RIGHT") -- ??
+		SP_ST_FrameTime:SetPoint("RIGHT", "SP_ST_Frame", "RIGHT", -iconW, 0)
+		SP_ST_FrameTime2:SetPoint("RIGHT", "SP_ST_FrameOFF", "RIGHT", -iconW, 0)
+		SP_ST_FrameTime3:SetPoint("RIGHT", "SP_ST_FrameRange", "RIGHT", -iconW, 0)
 	else
 		SP_ST_mainhand:SetTexture(nil);
 		SP_ST_mainhand:SetWidth(0);
