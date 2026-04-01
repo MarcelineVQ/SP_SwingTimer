@@ -448,6 +448,14 @@ local function ResetTimer(off,ranged)
 	if (hasRanged()) then SP_ST_FrameRange:Show() end
 end
 
+local function ResetRangedTimer(speed)
+	range_fader = GetTime()
+	local s = speed or UnitRangedDamage("player")
+	st_timerRangeMax = s
+	st_timerRange = s
+	if (hasRanged()) then SP_ST_FrameRange:Show() end
+end
+
 local function TestShow()
 	ResetTimer(false)
 end
@@ -476,7 +484,7 @@ local function UpdateDisplay()
 		SP_ST_FrameRange:SetBackdropColor(1,0,0,0.8);
 	end
 	-- most classes won't want ranged indicator to stay up all the time
-	if GetTime() - 10 > range_fader then
+	if GetTime() - (st_timerRangeMax + 3) > range_fader then
 		SP_ST_FrameRange:Hide()
 	end
 
@@ -841,9 +849,14 @@ function SP_ST_OnEvent()
 				flurry_count = flurry_count - 1 -- normal swing occured, reduce flurry counter
 			end
 			return
-		elseif arg3 == "CAST" and arg4 == 5019 then
-			-- wand shoot, treat wand as offhand, no reason no to
-			ResetTimer(nil,true)
+		elseif arg3 == "CAST" and (arg4 == 75    -- Auto Shot
+			or arg4 == 5019  -- Shoot Wand
+			or arg4 == 2480  -- Shoot Bow
+			or arg4 == 7919  -- Shoot Crossbow
+			or arg4 == 7918  -- Shoot Gun
+			or arg4 == 2764) -- Throw
+		then
+			ResetRangedTimer()
 			return
 		end
 
